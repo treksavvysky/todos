@@ -1,13 +1,12 @@
 'use client';
 
-import { useState } from 'react';
-import { ThemeProvider } from './components/ThemeProvider';
-import TodoApp from './components/TodoApp';
+import { AppProvider } from './components/AppProvider';
+import TaskDashboard from './components/tasks/TaskDashboard';
 
 export default function Home() {
   return (
-    <ThemeProvider>
-      <TodoApp />
-    </ThemeProvider>
+    <AppProvider>
+      <TaskDashboard />
+    </AppProvider>
   );
 }
