@@ -49,6 +49,8 @@ next-env.d.ts
 
 # database
 data/*.db
+data/*.db-shm
+data/*.db-wal
 
 # IDEs and Editors
 .vscode/
