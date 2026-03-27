@@ -1,11 +1,19 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useTheme } from '../ThemeProvider';
 import { useApp } from '../AppProvider';
+import { useDebounce } from '@/app/lib/useDebounce';
 
 export default function Header() {
   const { theme, toggleTheme } = useTheme();
-  const { state, dispatch } = useApp();
+  const { dispatch } = useApp();
+  const [searchInput, setSearchInput] = useState('');
+  const debouncedSearch = useDebounce(searchInput, 300);
+
+  useEffect(() => {
+    dispatch({ type: 'SET_FILTERS', payload: { search: debouncedSearch } });
+  }, [debouncedSearch, dispatch]);
 
   return (
     <header className="h-14 border-b flex items-center justify-between px-4 shrink-0"
@@ -18,8 +26,8 @@ export default function Header() {
         <input
           type="text"
           placeholder="Search tasks..."
-          value={state.filters.search || ''}
-          onChange={(e) => dispatch({ type: 'SET_FILTERS', payload: { search: e.target.value } })}
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
           className="text-sm rounded-md px-3 py-1.5 border outline-none focus:ring-2 focus:ring-indigo-400 w-48"
           style={{
             background: 'var(--color-bg)',

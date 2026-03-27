@@ -18,6 +18,7 @@ import type {
   LabelCreateInput,
   LabelUpdateInput,
 } from '@/app/lib/types';
+import type { ToastItem } from './ui/Toast';
 import * as api from '@/app/lib/api-client';
 
 // ---- State ----
@@ -29,6 +30,7 @@ interface AppState {
   selectedTaskId: string | null;
   isLoading: boolean;
   error: string | null;
+  toasts: ToastItem[];
 }
 
 const initialState: AppState = {
@@ -38,6 +40,7 @@ const initialState: AppState = {
   selectedTaskId: null,
   isLoading: true,
   error: null,
+  toasts: [],
 };
 
 // ---- Actions ----
@@ -52,7 +55,9 @@ type Action =
   | { type: 'UPSERT_TASK'; payload: TaskWithDetails }
   | { type: 'REMOVE_TASK'; payload: string }
   | { type: 'UPSERT_LABEL'; payload: LabelWithCount }
-  | { type: 'REMOVE_LABEL'; payload: string };
+  | { type: 'REMOVE_LABEL'; payload: string }
+  | { type: 'ADD_TOAST'; payload: Omit<ToastItem, 'id'> }
+  | { type: 'REMOVE_TOAST'; payload: string };
 
 function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
@@ -89,6 +94,12 @@ function reducer(state: AppState, action: Action): AppState {
     }
     case 'REMOVE_LABEL':
       return { ...state, labels: state.labels.filter((l) => l.id !== action.payload) };
+    case 'ADD_TOAST': {
+      const id = Math.random().toString(36).slice(2);
+      return { ...state, toasts: [...state.toasts, { id, ...action.payload }] };
+    }
+    case 'REMOVE_TOAST':
+      return { ...state, toasts: state.toasts.filter((t) => t.id !== action.payload) };
     default:
       return state;
   }
@@ -165,61 +176,103 @@ export function AppProvider({ children }: { children: ReactNode }) {
     loadData,
 
     createTask: async (input) => {
-      const task = await api.createTask(input);
-      dispatch({ type: 'UPSERT_TASK', payload: task });
-      // Refresh labels to update counts
-      const labels = await api.fetchLabels();
-      dispatch({ type: 'SET_LABELS', payload: labels });
-      return task;
+      try {
+        const task = await api.createTask(input);
+        dispatch({ type: 'UPSERT_TASK', payload: task });
+        // Refresh labels to update counts
+        const labels = await api.fetchLabels();
+        dispatch({ type: 'SET_LABELS', payload: labels });
+        dispatch({ type: 'ADD_TOAST', payload: { message: 'Task created', type: 'success' } });
+        return task;
+      } catch (err) {
+        dispatch({ type: 'ADD_TOAST', payload: { message: err instanceof Error ? err.message : 'Failed to create task', type: 'error' } });
+        throw err;
+      }
     },
 
     updateTask: async (id, input) => {
-      const task = await api.updateTask(id, input);
-      dispatch({ type: 'UPSERT_TASK', payload: task });
-      return task;
+      try {
+        const task = await api.updateTask(id, input);
+        dispatch({ type: 'UPSERT_TASK', payload: task });
+        return task;
+      } catch (err) {
+        dispatch({ type: 'ADD_TOAST', payload: { message: err instanceof Error ? err.message : 'Failed to update task', type: 'error' } });
+        throw err;
+      }
     },
 
     deleteTask: async (id) => {
-      await api.deleteTask(id);
-      dispatch({ type: 'REMOVE_TASK', payload: id });
-      const labels = await api.fetchLabels();
-      dispatch({ type: 'SET_LABELS', payload: labels });
+      try {
+        await api.deleteTask(id);
+        dispatch({ type: 'REMOVE_TASK', payload: id });
+        const labels = await api.fetchLabels();
+        dispatch({ type: 'SET_LABELS', payload: labels });
+        dispatch({ type: 'ADD_TOAST', payload: { message: 'Task deleted', type: 'success' } });
+      } catch (err) {
+        dispatch({ type: 'ADD_TOAST', payload: { message: err instanceof Error ? err.message : 'Failed to delete task', type: 'error' } });
+        throw err;
+      }
     },
 
     setTaskLabels: async (taskId, labelIds) => {
-      await api.setTaskLabels(taskId, labelIds);
-      // Refetch the task to get updated labels
-      const task = await api.fetchTask(taskId);
-      dispatch({ type: 'UPSERT_TASK', payload: task });
-      const labels = await api.fetchLabels();
-      dispatch({ type: 'SET_LABELS', payload: labels });
+      try {
+        await api.setTaskLabels(taskId, labelIds);
+        // Refetch the task to get updated labels
+        const task = await api.fetchTask(taskId);
+        dispatch({ type: 'UPSERT_TASK', payload: task });
+        const labels = await api.fetchLabels();
+        dispatch({ type: 'SET_LABELS', payload: labels });
+      } catch (err) {
+        dispatch({ type: 'ADD_TOAST', payload: { message: err instanceof Error ? err.message : 'Failed to update labels', type: 'error' } });
+        throw err;
+      }
     },
 
     addComment: async (taskId, content) => {
-      await api.addComment(taskId, content);
-      const task = await api.fetchTask(taskId);
-      dispatch({ type: 'UPSERT_TASK', payload: task });
+      try {
+        await api.addComment(taskId, content);
+        const task = await api.fetchTask(taskId);
+        dispatch({ type: 'UPSERT_TASK', payload: task });
+      } catch (err) {
+        dispatch({ type: 'ADD_TOAST', payload: { message: err instanceof Error ? err.message : 'Failed to add comment', type: 'error' } });
+        throw err;
+      }
     },
 
     createLabel: async (input) => {
-      await api.createLabel(input);
-      const labels = await api.fetchLabels();
-      dispatch({ type: 'SET_LABELS', payload: labels });
+      try {
+        await api.createLabel(input);
+        const labels = await api.fetchLabels();
+        dispatch({ type: 'SET_LABELS', payload: labels });
+      } catch (err) {
+        dispatch({ type: 'ADD_TOAST', payload: { message: err instanceof Error ? err.message : 'Failed to create label', type: 'error' } });
+        throw err;
+      }
     },
 
     updateLabel: async (id, input) => {
-      await api.updateLabel(id, input);
-      const labels = await api.fetchLabels();
-      dispatch({ type: 'SET_LABELS', payload: labels });
+      try {
+        await api.updateLabel(id, input);
+        const labels = await api.fetchLabels();
+        dispatch({ type: 'SET_LABELS', payload: labels });
+      } catch (err) {
+        dispatch({ type: 'ADD_TOAST', payload: { message: err instanceof Error ? err.message : 'Failed to update label', type: 'error' } });
+        throw err;
+      }
     },
 
     deleteLabel: async (id) => {
-      await api.deleteLabel(id);
-      const labels = await api.fetchLabels();
-      dispatch({ type: 'SET_LABELS', payload: labels });
-      // Refetch tasks since label removal may affect them
-      const tasks = await api.fetchTasks(state.filters);
-      dispatch({ type: 'SET_TASKS', payload: tasks });
+      try {
+        await api.deleteLabel(id);
+        const labels = await api.fetchLabels();
+        dispatch({ type: 'SET_LABELS', payload: labels });
+        // Refetch tasks since label removal may affect them
+        const tasks = await api.fetchTasks(state.filters);
+        dispatch({ type: 'SET_TASKS', payload: tasks });
+      } catch (err) {
+        dispatch({ type: 'ADD_TOAST', payload: { message: err instanceof Error ? err.message : 'Failed to delete label', type: 'error' } });
+        throw err;
+      }
     },
   };
 

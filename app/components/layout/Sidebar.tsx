@@ -1,14 +1,25 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useApp } from '../AppProvider';
 import LabelForm from '../labels/LabelForm';
-import type { LabelKind } from '@/app/lib/types';
+import ContextMenu from '../ui/ContextMenu';
+import ConfirmDialog from '../ui/ConfirmDialog';
+import type { LabelKind, LabelWithCount } from '@/app/lib/types';
+
+interface ContextMenuState {
+  label: LabelWithCount;
+  x: number;
+  y: number;
+}
 
 export default function Sidebar() {
-  const { state, dispatch } = useApp();
+  const { state, dispatch, actions } = useApp();
   const [showLabelForm, setShowLabelForm] = useState(false);
   const [labelFormKind, setLabelFormKind] = useState<LabelKind>('project');
+  const [editingLabel, setEditingLabel] = useState<LabelWithCount | null>(null);
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<LabelWithCount | null>(null);
 
   const scopes = state.labels.filter((l) => l.kind === 'scope');
   const projects = state.labels.filter((l) => l.kind === 'project');
@@ -32,7 +43,25 @@ export default function Sidebar() {
 
   const handleCreateLabel = (kind: LabelKind) => {
     setLabelFormKind(kind);
+    setEditingLabel(null);
     setShowLabelForm(true);
+  };
+
+  const handleContextMenu = useCallback((e: React.MouseEvent, label: LabelWithCount) => {
+    e.preventDefault();
+    setContextMenu({ label, x: e.clientX, y: e.clientY });
+  }, []);
+
+  const handleEdit = (label: LabelWithCount) => {
+    setLabelFormKind(label.kind);
+    setEditingLabel(label);
+    setShowLabelForm(true);
+  };
+
+  const handleDeleteConfirmed = async () => {
+    if (!confirmDelete) return;
+    await actions.deleteLabel(confirmDelete.id);
+    setConfirmDelete(null);
   };
 
   return (
@@ -59,6 +88,7 @@ export default function Sidebar() {
             <li key={scope.id}>
               <button
                 onClick={() => handleScopeClick(scope.id)}
+                onContextMenu={(e) => handleContextMenu(e, scope)}
                 className="w-full flex items-center justify-between px-2 py-1.5 rounded-md text-sm transition-colors"
                 style={{
                   background: activeScope === scope.id ? 'var(--color-bg-secondary)' : 'transparent',
@@ -100,6 +130,7 @@ export default function Sidebar() {
             <li key={project.id}>
               <button
                 onClick={() => handleProjectClick(project.id)}
+                onContextMenu={(e) => handleContextMenu(e, project)}
                 className="w-full flex items-center justify-between px-2 py-1.5 rounded-md text-sm transition-colors"
                 style={{
                   background: activeProject === project.id ? 'var(--color-bg-secondary)' : 'transparent',
@@ -130,7 +161,28 @@ export default function Sidebar() {
       {showLabelForm && (
         <LabelForm
           kind={labelFormKind}
-          onClose={() => setShowLabelForm(false)}
+          label={editingLabel ?? undefined}
+          onClose={() => { setShowLabelForm(false); setEditingLabel(null); }}
+        />
+      )}
+
+      {contextMenu && (
+        <ContextMenu
+          position={{ x: contextMenu.x, y: contextMenu.y }}
+          onClose={() => setContextMenu(null)}
+          items={[
+            { label: 'Edit', onClick: () => handleEdit(contextMenu.label) },
+            { label: 'Delete', onClick: () => setConfirmDelete(contextMenu.label), danger: true },
+          ]}
+        />
+      )}
+
+      {confirmDelete && (
+        <ConfirmDialog
+          title={`Delete ${confirmDelete.kind === 'scope' ? 'Scope' : 'Project'}`}
+          message={`Delete "${confirmDelete.name}"? Tasks with this label will lose it.`}
+          onConfirm={handleDeleteConfirmed}
+          onCancel={() => setConfirmDelete(null)}
         />
       )}
     </aside>

@@ -1,16 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useApp } from '../AppProvider';
 import Header from '../layout/Header';
 import Sidebar from '../layout/Sidebar';
 import TaskList from './TaskList';
 import TaskDetail from './TaskDetail';
 import TaskForm from './TaskForm';
+import { ToastContainer } from '../ui/Toast';
 
 export default function TaskDashboard() {
-  const { state } = useApp();
+  const { state, dispatch } = useApp();
   const [showTaskForm, setShowTaskForm] = useState(false);
+  const dismissToast = useCallback((id: string) => {
+    dispatch({ type: 'REMOVE_TOAST', payload: id });
+  }, [dispatch]);
 
   return (
     <div className="h-screen flex flex-col" style={{ background: 'var(--color-bg)' }}>
@@ -63,6 +67,8 @@ export default function TaskDashboard() {
       )}
 
       {showTaskForm && <TaskForm onClose={() => setShowTaskForm(false)} />}
+
+      <ToastContainer toasts={state.toasts} onDismiss={dismissToast} />
     </div>
   );
 }

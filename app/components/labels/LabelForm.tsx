@@ -2,21 +2,24 @@
 
 import { useState } from 'react';
 import { useApp } from '../AppProvider';
-import type { LabelKind } from '@/app/lib/types';
+import type { LabelKind, LabelWithCount } from '@/app/lib/types';
 
 const PRESET_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#6366f1', '#a855f7', '#ec4899'];
 
 interface LabelFormProps {
   kind: LabelKind;
   onClose: () => void;
+  label?: LabelWithCount;
 }
 
-export default function LabelForm({ kind, onClose }: LabelFormProps) {
+export default function LabelForm({ kind, onClose, label }: LabelFormProps) {
   const { actions } = useApp();
-  const [name, setName] = useState('');
-  const [color, setColor] = useState(PRESET_COLORS[0]);
+  const [name, setName] = useState(label?.name ?? '');
+  const [color, setColor] = useState(label?.color ?? PRESET_COLORS[0]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  const isEditing = label != null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,10 +28,14 @@ export default function LabelForm({ kind, onClose }: LabelFormProps) {
     setSubmitting(true);
     setError('');
     try {
-      await actions.createLabel({ name: name.trim(), kind, color });
+      if (isEditing) {
+        await actions.updateLabel(label.id, { name: name.trim(), color });
+      } else {
+        await actions.createLabel({ name: name.trim(), kind, color });
+      }
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create');
+      setError(err instanceof Error ? err.message : isEditing ? 'Failed to update' : 'Failed to create');
     } finally {
       setSubmitting(false);
     }
@@ -40,7 +47,7 @@ export default function LabelForm({ kind, onClose }: LabelFormProps) {
       style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' }}
     >
       <h3 className="text-xs font-semibold mb-2" style={{ color: 'var(--color-text)' }}>
-        New {kind === 'scope' ? 'Scope' : 'Project'}
+        {isEditing ? `Edit ${kind === 'scope' ? 'Scope' : 'Project'}` : `New ${kind === 'scope' ? 'Scope' : 'Project'}`}
       </h3>
       <form onSubmit={handleSubmit} className="flex flex-col gap-2">
         <input
@@ -87,7 +94,7 @@ export default function LabelForm({ kind, onClose }: LabelFormProps) {
             className="text-xs px-2 py-1 rounded text-white disabled:opacity-50"
             style={{ backgroundColor: 'var(--color-primary)' }}
           >
-            Create
+            {isEditing ? 'Save' : 'Create'}
           </button>
         </div>
       </form>
