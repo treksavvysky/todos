@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import { useApp } from '../AppProvider';
 import LabelForm from '../labels/LabelForm';
+import Modal from '../ui/Modal';
 import ContextMenu from '../ui/ContextMenu';
 import ConfirmDialog from '../ui/ConfirmDialog';
 import type { LabelKind, LabelWithCount } from '@/app/lib/types';
@@ -26,18 +27,34 @@ export default function Sidebar() {
 
   const activeScope = state.filters.scopeId;
   const activeProject = state.filters.projectId;
+  const isGeneralOnly = state.filters.generalOnly;
+  const isAllTasks = !activeScope && !activeProject && !isGeneralOnly;
+
+  const handleAllTasksClick = () => {
+    dispatch({
+      type: 'SET_FILTERS',
+      payload: { scopeId: null, projectId: null, generalOnly: false },
+    });
+  };
+
+  const handleGeneralClick = () => {
+    dispatch({
+      type: 'SET_FILTERS',
+      payload: { scopeId: null, projectId: null, generalOnly: true },
+    });
+  };
 
   const handleScopeClick = (id: string) => {
     dispatch({
       type: 'SET_FILTERS',
-      payload: { scopeId: activeScope === id ? null : id, projectId: null },
+      payload: { scopeId: activeScope === id ? null : id, projectId: null, generalOnly: false },
     });
   };
 
   const handleProjectClick = (id: string) => {
     dispatch({
       type: 'SET_FILTERS',
-      payload: { projectId: activeProject === id ? null : id, scopeId: null },
+      payload: { projectId: activeProject === id ? null : id, scopeId: null, generalOnly: false },
     });
   };
 
@@ -69,6 +86,34 @@ export default function Sidebar() {
       className="w-60 shrink-0 border-r overflow-y-auto p-4 flex flex-col gap-6"
       style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
     >
+      {/* Views */}
+      <div className="flex flex-col gap-1">
+        <button
+          onClick={handleAllTasksClick}
+          className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors"
+          style={{
+            background: isAllTasks ? 'var(--color-bg-secondary)' : 'transparent',
+            color: isAllTasks ? 'var(--color-text)' : 'var(--color-text-secondary)',
+            fontWeight: isAllTasks ? 600 : 400,
+          }}
+        >
+          <span>📥</span>
+          All Tasks
+        </button>
+        <button
+          onClick={handleGeneralClick}
+          className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors"
+          style={{
+            background: isGeneralOnly ? 'var(--color-bg-secondary)' : 'transparent',
+            color: isGeneralOnly ? 'var(--color-text)' : 'var(--color-text-secondary)',
+            fontWeight: isGeneralOnly ? 600 : 400,
+          }}
+        >
+          <span>🧊</span>
+          General
+        </button>
+      </div>
+
       {/* Scopes */}
       <div>
         <div className="flex items-center justify-between mb-2">
@@ -159,11 +204,16 @@ export default function Sidebar() {
       </div>
 
       {showLabelForm && (
-        <LabelForm
-          kind={labelFormKind}
-          label={editingLabel ?? undefined}
+        <Modal
+          title={editingLabel ? `Edit ${labelFormKind === 'scope' ? 'Scope' : 'Project'}` : `New ${labelFormKind === 'scope' ? 'Scope' : 'Project'}`}
           onClose={() => { setShowLabelForm(false); setEditingLabel(null); }}
-        />
+        >
+          <LabelForm
+            kind={labelFormKind}
+            label={editingLabel ?? undefined}
+            onClose={() => { setShowLabelForm(false); setEditingLabel(null); }}
+          />
+        </Modal>
       )}
 
       {contextMenu && (

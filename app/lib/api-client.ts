@@ -32,6 +32,7 @@ export async function fetchTasks(filters: TaskFilters = {}): Promise<TaskWithDet
   if (filters.priority && filters.priority !== 'all') params.set('priority', filters.priority);
   if (filters.scopeId) params.set('scopeId', filters.scopeId);
   if (filters.projectId) params.set('projectId', filters.projectId);
+  if (filters.generalOnly) params.set('generalOnly', 'true');
   if (filters.search) params.set('search', filters.search);
 
   const qs = params.toString();

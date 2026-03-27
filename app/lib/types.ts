@@ -80,5 +80,6 @@ export interface TaskFilters {
   priority?: TaskPriority | 'all';
   scopeId?: string | null;
   projectId?: string | null;
+  generalOnly?: boolean;
   search?: string;
 }

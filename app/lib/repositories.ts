@@ -75,6 +75,10 @@ export const TaskRepository = {
       conditions.push('EXISTS (SELECT 1 FROM task_labels tl JOIN labels l ON tl.label_id = l.id WHERE tl.task_id = t.id AND l.id = ? AND l.kind = ?)');
       params.push(filters.projectId, 'project');
     }
+    if (filters.generalOnly) {
+      conditions.push('NOT EXISTS (SELECT 1 FROM task_labels tl JOIN labels l ON tl.label_id = l.id WHERE tl.task_id = t.id AND l.kind = ?)');
+      params.push('project');
+    }
 
     const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const rows = db.prepare(`SELECT * FROM tasks t ${where} ORDER BY t.created_at DESC`).all(...params) as Record<string, unknown>[];

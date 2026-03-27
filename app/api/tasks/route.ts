@@ -10,12 +10,14 @@ export async function GET(request: NextRequest) {
   const priority = sp.get('priority');
   const scopeId = sp.get('scopeId');
   const projectId = sp.get('projectId');
+  const generalOnly = sp.get('generalOnly') === 'true';
   const search = sp.get('search');
 
   if (status) filters.status = status as TaskFilters['status'];
   if (priority) filters.priority = priority as TaskFilters['priority'];
   if (scopeId) filters.scopeId = scopeId;
   if (projectId) filters.projectId = projectId;
+  if (generalOnly) filters.generalOnly = true;
   if (search) filters.search = search;
 
   const tasks = TaskRepository.list(filters);

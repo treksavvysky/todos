@@ -43,47 +43,54 @@ export default function LabelForm({ kind, onClose, label }: LabelFormProps) {
 
   return (
     <div
-      className="border rounded-lg p-3"
-      style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' }}
+      className="p-1"
     >
-      <h3 className="text-xs font-semibold mb-2" style={{ color: 'var(--color-text)' }}>
-        {isEditing ? `Edit ${kind === 'scope' ? 'Scope' : 'Project'}` : `New ${kind === 'scope' ? 'Scope' : 'Project'}`}
-      </h3>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-2">
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Name"
-          className="w-full px-2 py-1 text-sm border rounded outline-none focus:ring-2 focus:ring-indigo-400"
-          style={{
-            background: 'var(--color-surface)',
-            borderColor: 'var(--color-border)',
-            color: 'var(--color-text)',
-          }}
-          autoFocus
-        />
-        <div className="flex gap-1">
-          {PRESET_COLORS.map((c) => (
-            <button
-              key={c}
-              type="button"
-              onClick={() => setColor(c)}
-              className="w-5 h-5 rounded-full border-2 transition-transform"
-              style={{
-                backgroundColor: c,
-                borderColor: color === c ? 'var(--color-text)' : 'transparent',
-                transform: color === c ? 'scale(1.2)' : 'scale(1)',
-              }}
-            />
-          ))}
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>Name</label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g. Personal, Work, Project X"
+            className="w-full px-3 py-2 text-sm border rounded-md outline-none focus:ring-2 focus:ring-indigo-400"
+            style={{
+              background: 'var(--color-surface)',
+              borderColor: 'var(--color-border)',
+              color: 'var(--color-text)',
+            }}
+            autoFocus
+          />
         </div>
-        {error && <p className="text-xs text-red-500">{error}</p>}
-        <div className="flex gap-2">
+
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>Color</label>
+          <div className="flex flex-wrap gap-2">
+            {PRESET_COLORS.map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setColor(c)}
+                className="w-8 h-8 rounded-full border-2 transition-all flex items-center justify-center"
+                style={{
+                  backgroundColor: c,
+                  borderColor: color === c ? 'var(--color-text)' : 'transparent',
+                  transform: color === c ? 'scale(1.1)' : 'scale(1)',
+                }}
+              >
+                {color === c && <span className="text-white text-xs">✓</span>}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {error && <p className="text-xs text-red-500 bg-red-50 p-2 rounded">{error}</p>}
+
+        <div className="flex justify-end gap-3 mt-2">
           <button
             type="button"
             onClick={onClose}
-            className="text-xs px-2 py-1 rounded hover:opacity-80"
+            className="px-4 py-2 text-sm font-medium rounded-md hover:opacity-80 transition-opacity"
             style={{ color: 'var(--color-text-secondary)' }}
           >
             Cancel
@@ -91,10 +98,10 @@ export default function LabelForm({ kind, onClose, label }: LabelFormProps) {
           <button
             type="submit"
             disabled={!name.trim() || submitting}
-            className="text-xs px-2 py-1 rounded text-white disabled:opacity-50"
+            className="px-4 py-2 text-sm font-medium rounded-md text-white disabled:opacity-50 transition-opacity"
             style={{ backgroundColor: 'var(--color-primary)' }}
           >
-            {isEditing ? 'Save' : 'Create'}
+            {submitting ? 'Saving...' : isEditing ? 'Save Changes' : `Create ${kind === 'scope' ? 'Scope' : 'Project'}`}
           </button>
         </div>
       </form>
