@@ -28,6 +28,7 @@ interface AppState {
   labels: LabelWithCount[];
   filters: TaskFilters;
   selectedTaskId: string | null;
+  bulkSelection: Set<string>;
   isLoading: boolean;
   error: string | null;
   toasts: ToastItem[];
@@ -38,6 +39,7 @@ const initialState: AppState = {
   labels: [],
   filters: { status: 'all', priority: 'all', scopeId: null, projectId: null, search: '' },
   selectedTaskId: null,
+  bulkSelection: new Set(),
   isLoading: true,
   error: null,
   toasts: [],
@@ -52,6 +54,9 @@ type Action =
   | { type: 'SET_LABELS'; payload: LabelWithCount[] }
   | { type: 'SET_FILTERS'; payload: Partial<TaskFilters> }
   | { type: 'SELECT_TASK'; payload: string | null }
+  | { type: 'TOGGLE_BULK_SELECT'; payload: string }
+  | { type: 'CLEAR_BULK_SELECT' }
+  | { type: 'SET_BULK_SELECT'; payload: string[] }
   | { type: 'UPSERT_TASK'; payload: TaskWithDetails }
   | { type: 'REMOVE_TASK'; payload: string }
   | { type: 'UPSERT_LABEL'; payload: LabelWithCount }
@@ -73,6 +78,19 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, filters: { ...state.filters, ...action.payload } };
     case 'SELECT_TASK':
       return { ...state, selectedTaskId: action.payload };
+    case 'TOGGLE_BULK_SELECT': {
+      const newSelection = new Set(state.bulkSelection);
+      if (newSelection.has(action.payload)) {
+        newSelection.delete(action.payload);
+      } else {
+        newSelection.add(action.payload);
+      }
+      return { ...state, bulkSelection: newSelection };
+    }
+    case 'CLEAR_BULK_SELECT':
+      return { ...state, bulkSelection: new Set() };
+    case 'SET_BULK_SELECT':
+      return { ...state, bulkSelection: new Set(action.payload) };
     case 'UPSERT_TASK': {
       const exists = state.tasks.some((t) => t.id === action.payload.id);
       const tasks = exists
@@ -122,6 +140,8 @@ interface AppActions {
   createTask: (input: TaskCreateInput) => Promise<TaskWithDetails>;
   updateTask: (id: string, input: TaskUpdateInput) => Promise<TaskWithDetails>;
   deleteTask: (id: string) => Promise<void>;
+  bulkUpdateTasks: (ids: string[], input: TaskUpdateInput) => Promise<void>;
+  bulkDeleteTasks: (ids: string[]) => Promise<void>;
   setTaskLabels: (taskId: string, labelIds: string[]) => Promise<void>;
   addComment: (taskId: string, content: string) => Promise<void>;
   createLabel: (input: LabelCreateInput) => Promise<void>;
@@ -210,6 +230,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
         dispatch({ type: 'ADD_TOAST', payload: { message: 'Task deleted', type: 'success' } });
       } catch (err) {
         dispatch({ type: 'ADD_TOAST', payload: { message: err instanceof Error ? err.message : 'Failed to delete task', type: 'error' } });
+        throw err;
+      }
+    },
+
+    bulkUpdateTasks: async (ids, input) => {
+      try {
+        await Promise.all(ids.map(id => api.updateTask(id, input)));
+        const tasks = await api.fetchTasks(state.filters);
+        dispatch({ type: 'SET_TASKS', payload: tasks });
+        dispatch({ type: 'ADD_TOAST', payload: { message: `${ids.length} tasks updated`, type: 'success' } });
+        dispatch({ type: 'CLEAR_BULK_SELECT' });
+      } catch (err) {
+        dispatch({ type: 'ADD_TOAST', payload: { message: 'Failed to update some tasks', type: 'error' } });
+        throw err;
+      }
+    },
+
+    bulkDeleteTasks: async (ids) => {
+      try {
+        await Promise.all(ids.map(id => api.deleteTask(id)));
+        const [tasks, labels] = await Promise.all([
+          api.fetchTasks(state.filters),
+          api.fetchLabels(),
+        ]);
+        dispatch({ type: 'SET_TASKS', payload: tasks });
+        dispatch({ type: 'SET_LABELS', payload: labels });
+        dispatch({ type: 'ADD_TOAST', payload: { message: `${ids.length} tasks deleted`, type: 'success' } });
+        dispatch({ type: 'CLEAR_BULK_SELECT' });
+      } catch (err) {
+        dispatch({ type: 'ADD_TOAST', payload: { message: 'Failed to delete some tasks', type: 'error' } });
         throw err;
       }
     },
