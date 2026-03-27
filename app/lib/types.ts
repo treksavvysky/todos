@@ -73,6 +73,9 @@ export interface LabelWithCount extends Label {
   taskCount: number;
 }
 
+export type TaskSortBy = 'created_at' | 'due_date' | 'priority' | 'title';
+export type SortOrder = 'asc' | 'desc';
+
 // ---- Filter Shape ----
 
 export interface TaskFilters {
@@ -82,4 +85,6 @@ export interface TaskFilters {
   projectId?: string | null;
   generalOnly?: boolean;
   search?: string;
+  sortBy?: TaskSortBy;
+  sortOrder?: SortOrder;
 }

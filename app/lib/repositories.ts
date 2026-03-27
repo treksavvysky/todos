@@ -81,7 +81,31 @@ export const TaskRepository = {
     }
 
     const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-    const rows = db.prepare(`SELECT * FROM tasks t ${where} ORDER BY t.created_at DESC`).all(...params) as Record<string, unknown>[];
+    
+    // Determine sort column and direction
+    let orderBy = 't.created_at';
+    let direction = filters.sortOrder === 'asc' ? 'ASC' : 'DESC';
+
+    if (filters.sortBy === 'title') {
+      orderBy = 't.title';
+    } else if (filters.sortBy === 'due_date') {
+      orderBy = 't.due_date';
+      // For due dates, we might want nulls at the end
+      if (direction === 'ASC') {
+        orderBy = 'CASE WHEN t.due_date IS NULL THEN 1 ELSE 0 END, t.due_date';
+      } else {
+        orderBy = 'CASE WHEN t.due_date IS NULL THEN 1 ELSE 0 END, t.due_date';
+      }
+    } else if (filters.sortBy === 'priority') {
+      // Custom order for priority: urgent > high > medium > low
+      const order = direction === 'DESC' 
+        ? "CASE t.priority WHEN 'urgent' THEN 4 WHEN 'high' THEN 3 WHEN 'medium' THEN 2 WHEN 'low' THEN 1 ELSE 0 END"
+        : "CASE t.priority WHEN 'low' THEN 1 WHEN 'medium' THEN 2 WHEN 'high' THEN 3 WHEN 'urgent' THEN 4 ELSE 0 END";
+      orderBy = order;
+      direction = 'DESC'; // The CASE statement handles direction
+    }
+
+    const rows = db.prepare(`SELECT * FROM tasks t ${where} ORDER BY ${orderBy} ${direction}`).all(...params) as Record<string, unknown>[];
 
     return rows.map((row) => {
       const task = rowToTask(row);

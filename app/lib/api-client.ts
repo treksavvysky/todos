@@ -34,6 +34,8 @@ export async function fetchTasks(filters: TaskFilters = {}): Promise<TaskWithDet
   if (filters.projectId) params.set('projectId', filters.projectId);
   if (filters.generalOnly) params.set('generalOnly', 'true');
   if (filters.search) params.set('search', filters.search);
+  if (filters.sortBy) params.set('sortBy', filters.sortBy);
+  if (filters.sortOrder) params.set('sortOrder', filters.sortOrder);
 
   const qs = params.toString();
   const data = await request<{ tasks: TaskWithDetails[] }>(`/api/tasks${qs ? `?${qs}` : ''}`);

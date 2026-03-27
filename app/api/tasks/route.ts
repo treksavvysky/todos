@@ -12,6 +12,8 @@ export async function GET(request: NextRequest) {
   const projectId = sp.get('projectId');
   const generalOnly = sp.get('generalOnly') === 'true';
   const search = sp.get('search');
+  const sortBy = sp.get('sortBy');
+  const sortOrder = sp.get('sortOrder');
 
   if (status) filters.status = status as TaskFilters['status'];
   if (priority) filters.priority = priority as TaskFilters['priority'];
@@ -19,6 +21,8 @@ export async function GET(request: NextRequest) {
   if (projectId) filters.projectId = projectId;
   if (generalOnly) filters.generalOnly = true;
   if (search) filters.search = search;
+  if (sortBy) filters.sortBy = sortBy as TaskFilters['sortBy'];
+  if (sortOrder) filters.sortOrder = sortOrder as TaskFilters['sortOrder'];
 
   const tasks = TaskRepository.list(filters);
   return NextResponse.json({ tasks });
