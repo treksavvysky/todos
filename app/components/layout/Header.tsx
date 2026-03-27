@@ -38,6 +38,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
 
       <div className="flex items-center gap-3">
         <input
+          id="task-search-input"
           type="text"
           placeholder="Search tasks..."
           value={searchInput}

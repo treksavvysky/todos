@@ -34,24 +34,28 @@ export default function TaskDetail() {
         
         <div className="w-full space-y-3 text-left">
           <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>
-            Quick Tips
+            Quick Tips & Shortcuts
           </p>
           <ul className="text-xs space-y-2" style={{ color: 'var(--color-text-secondary)' }}>
             <li className="flex items-start gap-2">
               <span className="text-primary mt-0.5">•</span>
-              <span>Use the <strong>Sidebar</strong> to filter by Scope or Project.</span>
+              <span><strong>Right-click</strong> sidebar labels to edit or delete.</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-primary mt-0.5">•</span>
-              <span><strong>Right-click</strong> labels in the sidebar to edit or delete them.</span>
+              <span>Press <kbd className="border px-1 rounded bg-slate-50">n</kbd> for a <strong>New Task</strong>.</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-primary mt-0.5">•</span>
-              <span>Use <strong>Search</strong> to quickly find specific tasks.</span>
+              <span>Press <kbd className="border px-1 rounded bg-slate-50">s</kbd> to <strong>Search</strong>.</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-primary mt-0.5">•</span>
-              <span>Sort your list by <strong>Priority</strong> or <strong>Due Date</strong>.</span>
+              <span>Use <kbd className="border px-1 rounded bg-slate-50">↑</kbd><kbd className="border px-1 rounded bg-slate-50">↓</kbd> to <strong>Navigate</strong> tasks.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-primary mt-0.5">•</span>
+              <span>Press <kbd className="border px-1 rounded bg-slate-50">Esc</kbd> to <strong>Deselect</strong> or close.</span>
             </li>
           </ul>
         </div>

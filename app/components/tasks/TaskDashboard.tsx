@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useApp } from '../AppProvider';
 import Header from '../layout/Header';
 import Sidebar from '../layout/Sidebar';
@@ -18,6 +18,47 @@ export default function TaskDashboard() {
   const dismissToast = useCallback((id: string) => {
     dispatch({ type: 'REMOVE_TOAST', payload: id });
   }, [dispatch]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isInput = ['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName);
+      if (isInput) return;
+
+      if (e.key === 'n') {
+        e.preventDefault();
+        setShowTaskForm(true);
+      } else if (e.key === 's') {
+        e.preventDefault();
+        document.getElementById('task-search-input')?.focus();
+      } else if (e.key === 'Escape') {
+        dispatch({ type: 'SELECT_TASK', payload: null });
+        setIsMenuOpen(false);
+      } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        if (state.tasks.length === 0) return;
+        e.preventDefault();
+        
+        const currentIndex = state.selectedTaskId 
+          ? state.tasks.findIndex(t => t.id === state.selectedTaskId)
+          : -1;
+        
+        let nextIndex = 0;
+        if (e.key === 'ArrowDown') {
+          nextIndex = currentIndex < state.tasks.length - 1 ? currentIndex + 1 : 0;
+        } else {
+          nextIndex = currentIndex > 0 ? currentIndex - 1 : state.tasks.length - 1;
+        }
+        
+        const nextTask = state.tasks[nextIndex];
+        if (nextTask) {
+          dispatch({ type: 'SELECT_TASK', payload: nextTask.id });
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [dispatch, state.tasks, state.selectedTaskId]);
 
   return (
     <div className="h-screen flex flex-col" style={{ background: 'var(--color-bg)' }}>
