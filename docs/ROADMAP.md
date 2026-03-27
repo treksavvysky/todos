@@ -6,32 +6,36 @@ Current status of priority improvements.
 
 ## ✅ Completed in Recent Iterations
 
-*   **Search Debounce:** (`app/lib/useDebounce.ts`) Search input is now debounced (300ms) to reduce API calls.
-*   **Error Toast Notifications:** (`app/components/ui/Toast.tsx`) Global notification system for success and error messages.
-*   **Sidebar Label Management:** Added context menus (right-click) to edit and delete scopes and projects.
-*   **Task Sorting:** Added sorting by Title, Priority, Due Date, and Creation Date with ASC/DESC toggle.
-*   **Detail Panel Empty State:** Added helpful tips and quick actions when no task is selected.
-*   **General Task View:** Added "Inbox" and "General" filters to the sidebar for project-free tasks.
+*   **Search Debounce:** (`app/lib/useDebounce.ts`) Search input is now debounced (300ms).
+*   **Error Toast Notifications:** (`app/components/ui/Toast.tsx`) Feedback on success/error.
+*   **Sidebar Label Management:** Edit/Delete scopes and projects from the UI.
+*   **Task Sorting:** Added sorting by Title, Priority, Due Date, and Creation Date.
+*   **Detail Panel Empty State:** Onboarding tips when no task is selected.
+*   **General Task View:** Inbox/General filters for project-free tasks.
+*   **Mobile Sidebar Access:** Hamburger menu and responsive drawer.
+*   **Keyboard Shortcuts:** `n`, `s`, `Esc`, and arrow key navigation.
+*   **Bulk Operations:** Multi-select for batch status updates and deletion.
 
 ---
 
-## 🚀 Next Priority: Mobile Access & Polish
+## 🚀 Next Priority: Performance & Robustness
 
-### 1. Mobile Sidebar Access
-**Problem:** The sidebar is currently hidden on mobile (`hidden md:block`), making it impossible to switch scopes/projects or manage labels on small screens.
-**Plan:** Implement a "Hamburger" menu in the `Header` that toggles a slide-out drawer or overlay containing the `Sidebar` content.
+### 1. Optimistic Updates
+**Problem:** Every action waits for API confirmation before updating the UI, which can feel slow.
+**Plan:** Update local state immediately on actions like status toggles, task creation, and comments. Roll back state if the API call fails.
 
-### 2. Keyboard Shortcuts
-**Problem:** Power users need faster ways to navigate.
-**Plan:** Add global listeners for:
-- `n`: New Task
-- `s`: Focus Search
-- `Esc`: Clear selection / close modal
-- `↑ / ↓`: Navigate task list
+### 2. Backend Input Sanitization
+**Problem:** API routes lack strict validation and trimming for incoming data.
+**Plan:** Implement robust validation for task and label inputs (length limits, enum checks, whitespace trimming).
 
-### 3. Bulk Operations
-**Problem:** Managing many tasks one-by-one is tedious.
-**Plan:** 
-- Add checkboxes to `TaskCard`.
-- Show a "Bulk Action" bar when 1+ tasks are selected.
-- Support batch status changes, label assignment, and deletion.
+### 3. N+1 Queries Optimization
+**Problem:** `TaskRepository.list()` performs multiple database queries per task row.
+**Plan:** Refactor the repository to use single-pass JOIN queries to fetch tasks along with their labels and comment counts.
+
+---
+
+## 🎨 Future Polish
+
+- **Kanban View:** A drag-and-drop board for status management.
+- **Due Date Time Component:** Support for specific times and recurring tasks.
+- **Pagination:** Implement cursor-based loading for large task lists.
