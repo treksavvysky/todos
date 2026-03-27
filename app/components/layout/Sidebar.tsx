@@ -14,7 +14,11 @@ interface ContextMenuState {
   y: number;
 }
 
-export default function Sidebar() {
+interface SidebarProps {
+  onSelect?: () => void;
+}
+
+export default function Sidebar({ onSelect }: SidebarProps) {
   const { state, dispatch, actions } = useApp();
   const [showLabelForm, setShowLabelForm] = useState(false);
   const [labelFormKind, setLabelFormKind] = useState<LabelKind>('project');
@@ -35,6 +39,7 @@ export default function Sidebar() {
       type: 'SET_FILTERS',
       payload: { scopeId: null, projectId: null, generalOnly: false },
     });
+    onSelect?.();
   };
 
   const handleGeneralClick = () => {
@@ -42,6 +47,7 @@ export default function Sidebar() {
       type: 'SET_FILTERS',
       payload: { scopeId: null, projectId: null, generalOnly: true },
     });
+    onSelect?.();
   };
 
   const handleScopeClick = (id: string) => {
@@ -49,6 +55,7 @@ export default function Sidebar() {
       type: 'SET_FILTERS',
       payload: { scopeId: activeScope === id ? null : id, projectId: null, generalOnly: false },
     });
+    onSelect?.();
   };
 
   const handleProjectClick = (id: string) => {
@@ -56,6 +63,7 @@ export default function Sidebar() {
       type: 'SET_FILTERS',
       payload: { projectId: activeProject === id ? null : id, scopeId: null, generalOnly: false },
     });
+    onSelect?.();
   };
 
   const handleCreateLabel = (kind: LabelKind) => {

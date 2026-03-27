@@ -8,23 +8,31 @@ import TaskList from './TaskList';
 import TaskDetail from './TaskDetail';
 import TaskForm from './TaskForm';
 import { ToastContainer } from '../ui/Toast';
+import Drawer from '../ui/Drawer';
 
 export default function TaskDashboard() {
   const { state, dispatch } = useApp();
   const [showTaskForm, setShowTaskForm] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
   const dismissToast = useCallback((id: string) => {
     dispatch({ type: 'REMOVE_TOAST', payload: id });
   }, [dispatch]);
 
   return (
     <div className="h-screen flex flex-col" style={{ background: 'var(--color-bg)' }}>
-      <Header />
+      <Header onMenuClick={() => setIsMenuOpen(true)} />
 
       <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar */}
+        {/* Desktop Sidebar */}
         <div className="hidden md:block">
           <Sidebar />
         </div>
+
+        {/* Mobile Sidebar Drawer */}
+        <Drawer isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} title="Task Manager">
+          <Sidebar onSelect={() => setIsMenuOpen(false)} />
+        </Drawer>
 
         {/* Main task list */}
         <div className="flex-1 flex flex-col min-w-0">

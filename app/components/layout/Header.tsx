@@ -5,7 +5,11 @@ import { useTheme } from '../ThemeProvider';
 import { useApp } from '../AppProvider';
 import { useDebounce } from '@/app/lib/useDebounce';
 
-export default function Header() {
+interface HeaderProps {
+  onMenuClick?: () => void;
+}
+
+export default function Header({ onMenuClick }: HeaderProps) {
   const { theme, toggleTheme } = useTheme();
   const { dispatch } = useApp();
   const [searchInput, setSearchInput] = useState('');
@@ -18,9 +22,19 @@ export default function Header() {
   return (
     <header className="h-14 border-b flex items-center justify-between px-4 shrink-0"
       style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-      <h1 className="text-lg font-semibold" style={{ color: 'var(--color-text)' }}>
-        Task Manager
-      </h1>
+      
+      <div className="flex items-center gap-2">
+        <button
+          onClick={onMenuClick}
+          className="md:hidden p-2 rounded-md hover:bg-black/5 transition-colors"
+          style={{ color: 'var(--color-text)' }}
+        >
+          ☰
+        </button>
+        <h1 className="text-lg font-semibold" style={{ color: 'var(--color-text)' }}>
+          Task Manager
+        </h1>
+      </div>
 
       <div className="flex items-center gap-3">
         <input
