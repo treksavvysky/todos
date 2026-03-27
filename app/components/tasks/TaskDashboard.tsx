@@ -48,15 +48,13 @@ export default function TaskDashboard() {
           <TaskList />
         </div>
 
-        {/* Detail panel */}
-        {state.selectedTaskId && (
-          <div className="hidden lg:block">
-            <TaskDetail />
-          </div>
-        )}
+        {/* Detail panel (Always shown on large screens) */}
+        <div className="hidden lg:block shrink-0">
+          <TaskDetail />
+        </div>
       </div>
 
-      {/* Mobile detail overlay */}
+      {/* Mobile detail overlay (Only shown when a task is selected) */}
       {state.selectedTaskId && (
         <div className="lg:hidden fixed inset-0 z-40">
           <div className="absolute inset-0 bg-black/40" />

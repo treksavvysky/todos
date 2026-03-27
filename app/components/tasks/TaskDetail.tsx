@@ -15,7 +15,49 @@ export default function TaskDetail() {
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const task = state.tasks.find((t) => t.id === state.selectedTaskId) ?? null;
-  if (!task) return null;
+
+  if (!task) {
+    return (
+      <aside
+        className="w-[360px] shrink-0 border-l flex flex-col items-center justify-center p-8 text-center"
+        style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
+      >
+        <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-4 text-2xl">
+          🎯
+        </div>
+        <h3 className="text-sm font-semibold mb-2" style={{ color: 'var(--color-text)' }}>
+          No Task Selected
+        </h3>
+        <p className="text-xs leading-relaxed mb-6" style={{ color: 'var(--color-text-secondary)' }}>
+          Select a task from the list to view its details, add comments, or manage labels.
+        </p>
+        
+        <div className="w-full space-y-3 text-left">
+          <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>
+            Quick Tips
+          </p>
+          <ul className="text-xs space-y-2" style={{ color: 'var(--color-text-secondary)' }}>
+            <li className="flex items-start gap-2">
+              <span className="text-primary mt-0.5">•</span>
+              <span>Use the <strong>Sidebar</strong> to filter by Scope or Project.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-primary mt-0.5">•</span>
+              <span><strong>Right-click</strong> labels in the sidebar to edit or delete them.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-primary mt-0.5">•</span>
+              <span>Use <strong>Search</strong> to quickly find specific tasks.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-primary mt-0.5">•</span>
+              <span>Sort your list by <strong>Priority</strong> or <strong>Due Date</strong>.</span>
+            </li>
+          </ul>
+        </div>
+      </aside>
+    );
+  }
 
   const handleFieldChange = async (field: string, value: string | null) => {
     await actions.updateTask(task.id, { [field]: value });
