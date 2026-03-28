@@ -13,6 +13,7 @@ import type { TaskStatus, TaskPriority } from '@/app/lib/types';
 export default function TaskDetail() {
   const { state, dispatch, actions } = useApp();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [isDecomposing, setIsDecomposing] = useState(false);
 
   const task = state.tasks.find((t) => t.id === state.selectedTaskId) ?? null;
 
@@ -76,6 +77,15 @@ export default function TaskDetail() {
     await actions.addComment(task.id, content);
   };
 
+  const handleDecompose = async () => {
+    setIsDecomposing(true);
+    try {
+      await actions.decomposeTask(task.id);
+    } finally {
+      setIsDecomposing(false);
+    }
+  };
+
   return (
     <aside
       className="w-[360px] shrink-0 border-l overflow-y-auto flex flex-col"
@@ -94,6 +104,20 @@ export default function TaskDetail() {
       </div>
 
       <div className="flex-1 p-4 flex flex-col gap-4">
+        {/* Magic AI Button */}
+        <button
+          onClick={handleDecompose}
+          disabled={isDecomposing}
+          className="w-full py-2 rounded-md text-xs font-bold border border-dashed transition-all hover:bg-indigo-50 flex items-center justify-center gap-2 mb-2"
+          style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)' }}
+        >
+          {isDecomposing ? (
+            <span className="animate-pulse">✨ AI is thinking...</span>
+          ) : (
+            <><span>✨</span> Break it down</>
+          )}
+        </button>
+
         {/* Title */}
         <EditableField
           value={task.title}

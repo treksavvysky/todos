@@ -142,6 +142,7 @@ interface AppActions {
   deleteTask: (id: string) => Promise<void>;
   bulkUpdateTasks: (ids: string[], input: TaskUpdateInput) => Promise<void>;
   bulkDeleteTasks: (ids: string[]) => Promise<void>;
+  decomposeTask: (id: string) => Promise<void>;
   setTaskLabels: (taskId: string, labelIds: string[]) => Promise<void>;
   addComment: (taskId: string, content: string) => Promise<void>;
   createLabel: (input: LabelCreateInput) => Promise<void>;
@@ -260,6 +261,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
         dispatch({ type: 'CLEAR_BULK_SELECT' });
       } catch (err) {
         dispatch({ type: 'ADD_TOAST', payload: { message: 'Failed to delete some tasks', type: 'error' } });
+        throw err;
+      }
+    },
+
+    decomposeTask: async (id) => {
+      const task = state.tasks.find(t => t.id === id);
+      if (!task) return;
+
+      try {
+        const { checklist } = await api.decomposeTaskAI(task.title, task.description);
+        const updatedDescription = task.description 
+          ? `${task.description}\n\n${checklist}`
+          : checklist;
+        
+        const updatedTask = await api.updateTask(id, { description: updatedDescription });
+        dispatch({ type: 'UPSERT_TASK', payload: updatedTask });
+        dispatch({ type: 'ADD_TOAST', payload: { message: 'Task broken down!', type: 'success' } });
+      } catch (err) {
+        dispatch({ type: 'ADD_TOAST', payload: { message: 'Failed to decompose task', type: 'error' } });
         throw err;
       }
     },

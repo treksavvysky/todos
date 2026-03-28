@@ -113,3 +113,10 @@ export async function parseIntentAI(input: string, labels: Label[]): Promise<{ t
     body: JSON.stringify({ input, labels }),
   });
 }
+
+export async function decomposeTaskAI(title: string, description?: string): Promise<{ checklist: string }> {
+  return request<{ checklist: string }>('/api/ai/decompose', {
+    method: 'POST',
+    body: JSON.stringify({ title, description }),
+  });
+}
