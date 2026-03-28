@@ -7,12 +7,14 @@ import Sidebar from '../layout/Sidebar';
 import TaskList from './TaskList';
 import TaskDetail from './TaskDetail';
 import TaskForm from './TaskForm';
+import QuickAdd from './QuickAdd';
 import { ToastContainer } from '../ui/Toast';
 import Drawer from '../ui/Drawer';
 
 export default function TaskDashboard() {
   const { state, dispatch } = useApp();
   const [showTaskForm, setShowTaskForm] = useState(false);
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const dismissToast = useCallback((id: string) => {
@@ -27,13 +29,18 @@ export default function TaskDashboard() {
 
       if (e.key === 'n') {
         e.preventDefault();
-        setShowTaskForm(true);
+        setShowQuickAdd(true);
+      } else if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setShowQuickAdd(true);
       } else if (e.key === 's') {
         e.preventDefault();
         document.getElementById('task-search-input')?.focus();
       } else if (e.key === 'Escape') {
         dispatch({ type: 'SELECT_TASK', payload: null });
         setIsMenuOpen(false);
+        setShowTaskForm(false);
+        setShowQuickAdd(false);
       } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         if (state.tasks.length === 0) return;
         e.preventDefault();
@@ -86,11 +93,11 @@ export default function TaskDashboard() {
               {state.tasks.length} task{state.tasks.length !== 1 ? 's' : ''}
             </span>
             <button
-              onClick={() => setShowTaskForm(true)}
+              onClick={() => setShowQuickAdd(true)}
               className="px-3 py-1.5 text-sm rounded-md text-white"
               style={{ backgroundColor: 'var(--color-primary)' }}
             >
-              + New Task
+              + Quick Add
             </button>
           </div>
 
@@ -114,6 +121,7 @@ export default function TaskDashboard() {
       )}
 
       {showTaskForm && <TaskForm onClose={() => setShowTaskForm(false)} />}
+      {showQuickAdd && <QuickAdd onClose={() => setShowQuickAdd(false)} />}
 
       <ToastContainer toasts={state.toasts} onDismiss={dismissToast} />
     </div>
