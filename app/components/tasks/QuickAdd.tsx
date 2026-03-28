@@ -115,8 +115,8 @@ export default function QuickAdd({ onClose }: QuickAddProps) {
               {tasksPreview.map((task, idx) => (
                 <div 
                   key={idx}
-                  className="p-3 rounded-md border bg-white shadow-sm flex flex-col gap-2 animate-in fade-in slide-in-from-top-1 duration-200"
-                  style={{ borderColor: 'var(--color-border)' }}
+                  className="p-3 rounded-md border shadow-sm flex flex-col gap-2 animate-in fade-in slide-in-from-top-1 duration-200"
+                  style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}
                 >
                   <h4 className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>{task.title}</h4>
                   <div className="flex items-center gap-2 flex-wrap">
