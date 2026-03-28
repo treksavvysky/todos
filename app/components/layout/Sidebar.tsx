@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { useApp } from '../AppProvider';
 import LabelForm from '../labels/LabelForm';
 import Modal from '../ui/Modal';
+import GardenerModal from '../ui/GardenerModal';
 import ContextMenu from '../ui/ContextMenu';
 import ConfirmDialog from '../ui/ConfirmDialog';
 import type { LabelKind, LabelWithCount } from '@/app/lib/types';
@@ -25,6 +26,7 @@ export default function Sidebar({ onSelect }: SidebarProps) {
   const [editingLabel, setEditingLabel] = useState<LabelWithCount | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<LabelWithCount | null>(null);
+  const [showGardener, setShowGardener] = useState(false);
 
   const scopes = state.labels.filter((l) => l.kind === 'scope');
   const projects = state.labels.filter((l) => l.kind === 'project');
@@ -119,6 +121,16 @@ export default function Sidebar({ onSelect }: SidebarProps) {
         >
           <span>🧊</span>
           General
+        </button>
+        <button
+          onClick={() => setShowGardener(true)}
+          className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors hover:bg-indigo-50 group"
+          style={{
+            color: 'var(--color-primary)',
+          }}
+        >
+          <span className="group-hover:animate-bounce">🧑‍🌾</span>
+          Garden Review
         </button>
       </div>
 
@@ -242,6 +254,10 @@ export default function Sidebar({ onSelect }: SidebarProps) {
           onConfirm={handleDeleteConfirmed}
           onCancel={() => setConfirmDelete(null)}
         />
+      )}
+
+      {showGardener && (
+        <GardenerModal onClose={() => setShowGardener(false)} />
       )}
     </aside>
   );

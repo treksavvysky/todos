@@ -120,3 +120,9 @@ export async function decomposeTaskAI(title: string, description?: string): Prom
     body: JSON.stringify({ title, description }),
   });
 }
+
+export async function gardenBacklogAI(): Promise<{ insights: string }> {
+  return request<{ insights: string }>('/api/ai/garden', {
+    method: 'POST',
+  });
+}
