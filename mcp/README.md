@@ -14,7 +14,8 @@ The server exposes the following tools to the AI:
 
 ## 🛠️ Configuration
 
-To use this with Claude Desktop, add the following to your `claude_desktop_config.json`:
+### Claude Desktop
+Add the following to your `claude_desktop_config.json`:
 
 ```json
 {
@@ -34,7 +35,30 @@ To use this with Claude Desktop, add the following to your `claude_desktop_confi
 }
 ```
 
+### Gemini CLI
+Create or update `.gemini/settings.json` in the root of this project:
+
+```json
+{
+  "mcpServers": {
+    "todos-local": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "tsx",
+        "/Users/YOUR_USER/Projects/todos/mcp/server.ts"
+      ],
+      "env": {
+        "NODE_ENV": "development"
+      },
+      "trust": true
+    }
+  }
+}
+```
+
 *Replace `/Users/YOUR_USER/Projects/todos` with the actual absolute path to this repository.*
+
 
 ## 🧪 Testing
 

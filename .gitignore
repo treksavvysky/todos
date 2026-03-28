@@ -57,3 +57,6 @@ data/*.db-wal
 .idea/
 *.swp
 *.swo
+
+# Gemini CLI
+.gemini/
