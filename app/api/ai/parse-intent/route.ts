@@ -17,7 +17,10 @@ export async function POST(request: NextRequest) {
     }
 
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-pro"
+      model: "gemini-1.5-flash",
+      generationConfig: {
+        responseMimeType: "application/json",
+      }
     });
 
     const prompt = `
@@ -31,10 +34,13 @@ export async function POST(request: NextRequest) {
       
       Current Date: ${new Date().toISOString().split('T')[0]}
       
-      IMPORTANT: Return ONLY valid JSON. Do not include markdown formatting or backticks.
-      
-      JSON Schema:
-      { "tasks": [ { "title": string, "priority": "urgent"|"high"|"medium"|"low", "dueDate": string|null, "labelIds": string[] } ] }
+      Rules:
+      1. Extract the core action as the "title".
+      2. Identify "priority" (urgent, high, medium, low). Default to "medium".
+      3. Extract "dueDate" in YYYY-MM-DD format if mentioned.
+      4. Match "labelIds" based on the provided list. If an intent clearly belongs to a scope (like "gym" to "Health"), include that ID even if not explicitly named.
+      5. Return a JSON object with a "tasks" array containing objects matching this schema:
+         { "title": string, "priority": "urgent"|"high"|"medium"|"low", "dueDate": string|null, "labelIds": string[] }
     `;
 
     const result = await model.generateContent(prompt);
