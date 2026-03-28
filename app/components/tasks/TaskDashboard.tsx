@@ -5,6 +5,7 @@ import { useApp } from '../AppProvider';
 import Header from '../layout/Header';
 import Sidebar from '../layout/Sidebar';
 import TaskList from './TaskList';
+import KanbanBoard from './KanbanBoard';
 import TaskDetail from './TaskDetail';
 import TaskForm from './TaskForm';
 import QuickAdd from './QuickAdd';
@@ -16,6 +17,7 @@ export default function TaskDashboard() {
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
 
   const dismissToast = useCallback((id: string) => {
     dispatch({ type: 'REMOVE_TOAST', payload: id });
@@ -89,9 +91,29 @@ export default function TaskDashboard() {
             className="flex items-center justify-between px-4 py-2 border-b"
             style={{ borderColor: 'var(--color-border)' }}
           >
-            <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-              {state.tasks.length} task{state.tasks.length !== 1 ? 's' : ''}
-            </span>
+            <div className="flex items-center gap-4">
+              <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                {state.tasks.length} task{state.tasks.length !== 1 ? 's' : ''}
+              </span>
+              
+              <div className="flex bg-slate-100 rounded-md p-0.5 border" style={{ borderColor: 'var(--color-border)' }}>
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`px-2 py-1 text-[10px] font-bold rounded transition-all ${viewMode === 'list' ? 'bg-white shadow-sm' : 'opacity-50'}`}
+                  style={{ color: 'var(--color-text)' }}
+                >
+                  LIST
+                </button>
+                <button
+                  onClick={() => setViewMode('kanban')}
+                  className={`px-2 py-1 text-[10px] font-bold rounded transition-all ${viewMode === 'kanban' ? 'bg-white shadow-sm' : 'opacity-50'}`}
+                  style={{ color: 'var(--color-text)' }}
+                >
+                  KANBAN
+                </button>
+              </div>
+            </div>
+
             <button
               onClick={() => setShowQuickAdd(true)}
               className="px-3 py-1.5 text-sm rounded-md text-white"
@@ -101,7 +123,7 @@ export default function TaskDashboard() {
             </button>
           </div>
 
-          <TaskList />
+          {viewMode === 'list' ? <TaskList /> : <KanbanBoard />}
         </div>
 
         {/* Detail panel (Always shown on large screens) */}
