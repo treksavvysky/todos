@@ -6,9 +6,11 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "mcp:start": "tsx mcp/server.ts"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "1.28.0",
     "better-sqlite3": "^12.8.0",
     "next": "15.5.4",
     "react": "19.1.0",
