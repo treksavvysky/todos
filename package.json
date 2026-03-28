@@ -10,6 +10,7 @@
     "mcp:start": "tsx mcp/server.ts"
   },
   "dependencies": {
+    "@google/generative-ai": "0.24.1",
     "@modelcontextprotocol/sdk": "1.28.0",
     "better-sqlite3": "^12.8.0",
     "next": "15.5.4",

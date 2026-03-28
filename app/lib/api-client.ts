@@ -104,3 +104,12 @@ export async function updateLabel(id: string, input: LabelUpdateInput): Promise<
 export async function deleteLabel(id: string): Promise<void> {
   await request(`/api/labels/${id}`, { method: 'DELETE' });
 }
+
+// ---- AI ----
+
+export async function parseIntentAI(input: string, labels: Label[]): Promise<{ tasks: TaskCreateInput[] }> {
+  return request<{ tasks: TaskCreateInput[] }>('/api/ai/parse-intent', {
+    method: 'POST',
+    body: JSON.stringify({ input, labels }),
+  });
+}
