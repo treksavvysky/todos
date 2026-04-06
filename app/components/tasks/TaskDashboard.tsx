@@ -96,18 +96,24 @@ export default function TaskDashboard() {
                 {state.tasks.length} task{state.tasks.length !== 1 ? 's' : ''}
               </span>
               
-              <div className="flex bg-slate-100 rounded-md p-0.5 border" style={{ borderColor: 'var(--color-border)' }}>
+              <div className="flex rounded-md p-0.5 border" style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' }}>
                 <button
                   onClick={() => setViewMode('list')}
-                  className={`px-2 py-1 text-[10px] font-bold rounded transition-all ${viewMode === 'list' ? 'bg-white shadow-sm' : 'opacity-50'}`}
-                  style={{ color: 'var(--color-text)' }}
+                  className="px-2 py-1 text-[10px] font-bold rounded transition-all"
+                  style={{
+                    backgroundColor: viewMode === 'list' ? 'var(--color-primary)' : 'transparent',
+                    color: viewMode === 'list' ? '#ffffff' : 'var(--color-text-muted)',
+                  }}
                 >
                   LIST
                 </button>
                 <button
                   onClick={() => setViewMode('kanban')}
-                  className={`px-2 py-1 text-[10px] font-bold rounded transition-all ${viewMode === 'kanban' ? 'bg-white shadow-sm' : 'opacity-50'}`}
-                  style={{ color: 'var(--color-text)' }}
+                  className="px-2 py-1 text-[10px] font-bold rounded transition-all"
+                  style={{
+                    backgroundColor: viewMode === 'kanban' ? 'var(--color-primary)' : 'transparent',
+                    color: viewMode === 'kanban' ? '#ffffff' : 'var(--color-text-muted)',
+                  }}
                 >
                   KANBAN
                 </button>

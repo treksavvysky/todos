@@ -31,8 +31,9 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         inputSchema: {
           type: "object",
           properties: {
-            status: { type: "string", enum: ["pending", "in_progress", "completed", "all"] },
+            status: { type: "string", enum: ["ready", "active", "blocked", "waiting", "parked", "done", "all"] },
             priority: { type: "string", enum: ["low", "medium", "high", "urgent", "all"] },
+            itemType: { type: "string", enum: ["action", "decision", "initiative", "idea", "maintenance", "all"], description: "Filter by item type" },
             search: { type: "string", description: "Search term for task titles" },
             scopeId: { type: "string" },
             projectId: { type: "string" },
@@ -59,6 +60,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             title: { type: "string" },
             description: { type: "string" },
             priority: { type: "string", enum: ["low", "medium", "high", "urgent"] },
+            itemType: { type: "string", enum: ["action", "decision", "initiative", "idea", "maintenance"], description: "The kind of work this item represents. Defaults to 'action'." },
             dueDate: { type: "string", description: "ISO date string (YYYY-MM-DD)" },
             labelIds: { type: "array", items: { type: "string" } },
           },
@@ -74,8 +76,9 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             id: { type: "string" },
             title: { type: "string" },
             description: { type: "string" },
-            status: { type: "string", enum: ["pending", "in_progress", "completed"] },
+            status: { type: "string", enum: ["ready", "active", "blocked", "waiting", "parked", "done"] },
             priority: { type: "string", enum: ["low", "medium", "high", "urgent"] },
+            itemType: { type: "string", enum: ["action", "decision", "initiative", "idea", "maintenance"] },
             dueDate: { type: "string" },
           },
           required: ["id"],
@@ -129,12 +132,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "create_task": {
-        const task = TaskRepository.create(args as TaskCreateInput);
+        const task = TaskRepository.create(args as unknown as TaskCreateInput);
         return { content: [{ type: "text", text: `Task created: ${task.id}` }] };
       }
 
       case "update_task": {
-        const { id, ...updates } = args as { id: string } & TaskUpdateInput;
+        const { id, ...updates } = args as unknown as { id: string } & TaskUpdateInput;
         const task = TaskRepository.update(id, updates);
         return { 
           content: [{ type: "text", text: task ? `Task ${id} updated` : "Task not found" }],

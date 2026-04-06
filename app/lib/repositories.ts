@@ -22,6 +22,7 @@ function rowToTask(row: Record<string, unknown>): Task {
     description: row.description as string,
     status: row.status as Task['status'],
     priority: row.priority as Task['priority'],
+    itemType: (row.item_type as Task['itemType']) || 'action',
     dueDate: (row.due_date as string) || null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
@@ -74,6 +75,10 @@ export const TaskRepository = {
     if (filters.projectId) {
       conditions.push('EXISTS (SELECT 1 FROM task_labels tl JOIN labels l ON tl.label_id = l.id WHERE tl.task_id = t.id AND l.id = ? AND l.kind = ?)');
       params.push(filters.projectId, 'project');
+    }
+    if (filters.itemType && filters.itemType !== 'all') {
+      conditions.push('t.item_type = ?');
+      params.push(filters.itemType);
     }
     if (filters.generalOnly) {
       conditions.push('NOT EXISTS (SELECT 1 FROM task_labels tl JOIN labels l ON tl.label_id = l.id WHERE tl.task_id = t.id AND l.kind = ?)');
@@ -136,14 +141,15 @@ export const TaskRepository = {
     const now = nowISO();
 
     db.prepare(`
-      INSERT INTO tasks (id, title, description, status, priority, due_date, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO tasks (id, title, description, status, priority, item_type, due_date, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       input.title,
       input.description || '',
-      input.status || 'pending',
+      input.status || 'ready',
       input.priority || 'medium',
+      input.itemType || 'action',
       input.dueDate || null,
       now,
       now,
@@ -168,6 +174,7 @@ export const TaskRepository = {
     if (input.description !== undefined) { sets.push('description = ?'); params.push(input.description); }
     if (input.status !== undefined) { sets.push('status = ?'); params.push(input.status); }
     if (input.priority !== undefined) { sets.push('priority = ?'); params.push(input.priority); }
+    if (input.itemType !== undefined) { sets.push('item_type = ?'); params.push(input.itemType); }
     if (input.dueDate !== undefined) { sets.push('due_date = ?'); params.push(input.dueDate); }
 
     if (sets.length > 0) {

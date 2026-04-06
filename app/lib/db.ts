@@ -24,10 +24,12 @@ function runMigrations(db: Database.Database): void {
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL,
       description TEXT NOT NULL DEFAULT '',
-      status TEXT NOT NULL DEFAULT 'pending'
-        CHECK (status IN ('pending', 'in_progress', 'completed')),
+      status TEXT NOT NULL DEFAULT 'ready'
+        CHECK (status IN ('ready', 'active', 'blocked', 'waiting', 'parked', 'done')),
       priority TEXT NOT NULL DEFAULT 'medium'
         CHECK (priority IN ('low', 'medium', 'high', 'urgent')),
+      item_type TEXT NOT NULL DEFAULT 'action'
+        CHECK (item_type IN ('action', 'decision', 'initiative', 'idea', 'maintenance')),
       due_date TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
@@ -63,6 +65,60 @@ function runMigrations(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_task_labels_label ON task_labels(label_id);
     CREATE INDEX IF NOT EXISTS idx_comments_task ON comments(task_id);
   `);
+
+  // Migration: add item_type column to existing databases
+  const columns = db.prepare("PRAGMA table_info(tasks)").all() as { name: string }[];
+  if (!columns.some(c => c.name === 'item_type')) {
+    db.exec("ALTER TABLE tasks ADD COLUMN item_type TEXT DEFAULT 'action'");
+  }
+
+  db.exec("CREATE INDEX IF NOT EXISTS idx_tasks_item_type ON tasks(item_type)");
+
+  // Migration: rebuild tasks table to update CHECK constraint for new execution states
+  // SQLite doesn't support ALTER CHECK, so we must rebuild the table
+  const tableSQL = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='tasks'").get() as { sql: string } | undefined;
+  if (tableSQL && tableSQL.sql.includes("'pending'")) {
+    // Disable foreign keys during rebuild to preserve task_labels and comments
+    db.pragma('foreign_keys = OFF');
+    db.exec(`
+      CREATE TABLE tasks_new (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL DEFAULT '',
+        status TEXT NOT NULL DEFAULT 'ready'
+          CHECK (status IN ('ready', 'active', 'blocked', 'waiting', 'parked', 'done')),
+        priority TEXT NOT NULL DEFAULT 'medium'
+          CHECK (priority IN ('low', 'medium', 'high', 'urgent')),
+        item_type TEXT NOT NULL DEFAULT 'action'
+          CHECK (item_type IN ('action', 'decision', 'initiative', 'idea', 'maintenance')),
+        due_date TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      INSERT INTO tasks_new SELECT
+        id, title, description,
+        CASE status
+          WHEN 'pending' THEN 'ready'
+          WHEN 'in_progress' THEN 'active'
+          WHEN 'completed' THEN 'done'
+          ELSE status
+        END,
+        priority,
+        COALESCE(item_type, 'action'),
+        due_date, created_at, updated_at
+      FROM tasks;
+
+      DROP TABLE tasks;
+      ALTER TABLE tasks_new RENAME TO tasks;
+
+      CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
+      CREATE INDEX IF NOT EXISTS idx_tasks_priority ON tasks(priority);
+      CREATE INDEX IF NOT EXISTS idx_tasks_item_type ON tasks(item_type);
+      CREATE INDEX IF NOT EXISTS idx_tasks_due_date ON tasks(due_date);
+    `);
+    db.pragma('foreign_keys = ON');
+  }
 
   seedDefaults(db);
 }

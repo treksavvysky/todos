@@ -1,4 +1,4 @@
-import type { TaskPriority, TaskCreateInput, Label } from './types';
+import type { TaskPriority, ItemType, TaskCreateInput, Label } from './types';
 
 interface ParseResult {
   task: TaskCreateInput;
@@ -15,6 +15,13 @@ const PRIORITY_KEYWORDS: Record<string, TaskPriority> = {
   'minor': 'low',
 };
 
+const ITEM_TYPE_PATTERNS: { pattern: RegExp; type: ItemType }[] = [
+  { pattern: /\b(decide|choose|evaluate|whether|should i|pick between|weigh)\b/i, type: 'decision' },
+  { pattern: /\b(idea|maybe|someday|what if|explore|consider|brainstorm)\b/i, type: 'idea' },
+  { pattern: /\b(maintain|clean up|review|backup|renew|recurring|routine|upkeep)\b/i, type: 'maintenance' },
+  { pattern: /\b(project|launch|redesign|migration|initiative|rollout|overhaul)\b/i, type: 'initiative' },
+];
+
 /**
  * Heuristic-based parser for "Brain-Dump" intent extraction.
  * This is Phase 1 (Local-First).
@@ -23,6 +30,7 @@ export function parseTaskIntent(input: string, allLabels: Label[]): ParseResult 
   const normalized = input.toLowerCase();
   let title = input;
   let priority: TaskPriority = 'medium';
+  let itemType: ItemType = 'action';
   let dueDate: string | null = null;
   const labelIds: string[] = [];
   let confidence = 0.5; // Base confidence for simple heuristic
@@ -37,7 +45,16 @@ export function parseTaskIntent(input: string, allLabels: Label[]): ParseResult 
     }
   }
 
-  // 2. Label Detection (Scopes & Projects)
+  // 2. Item Type Detection
+  for (const { pattern, type } of ITEM_TYPE_PATTERNS) {
+    if (pattern.test(normalized)) {
+      itemType = type;
+      confidence += 0.1;
+      break;
+    }
+  }
+
+  // 3. Label Detection (Scopes & Projects)
   for (const label of allLabels) {
     if (normalized.includes(label.name.toLowerCase())) {
       labelIds.push(label.id);
@@ -45,7 +62,7 @@ export function parseTaskIntent(input: string, allLabels: Label[]): ParseResult 
     }
   }
 
-  // 3. Basic Date Detection (Simple relative dates)
+  // 4. Basic Date Detection (Simple relative dates)
   // Note: For a real app, use chrono-node here.
   const today = new Date();
   if (/\btomorrow\b/i.test(normalized)) {
@@ -63,7 +80,7 @@ export function parseTaskIntent(input: string, allLabels: Label[]): ParseResult 
     confidence += 0.2;
   }
 
-  // 4. Title Refinement
+  // 5. Title Refinement
   // In a real LLM implementation, the title would be "cleaned up" (e.g., removing date/priority markers)
   // For now, we keep the original string but trim it.
   title = title.trim();
@@ -72,9 +89,10 @@ export function parseTaskIntent(input: string, allLabels: Label[]): ParseResult 
     task: {
       title,
       priority,
+      itemType,
       dueDate,
       labelIds,
-      status: 'pending',
+      status: 'ready',
     },
     confidence: Math.min(confidence, 1.0),
   };

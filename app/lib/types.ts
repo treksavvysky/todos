@@ -1,7 +1,8 @@
 // ---- Enums ----
 
-export type TaskStatus = 'pending' | 'in_progress' | 'completed';
+export type TaskStatus = 'ready' | 'active' | 'blocked' | 'waiting' | 'parked' | 'done';
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
+export type ItemType = 'action' | 'decision' | 'initiative' | 'idea' | 'maintenance';
 export type LabelKind = 'scope' | 'project';
 
 // ---- Core Entities ----
@@ -12,6 +13,7 @@ export interface Task {
   description: string;
   status: TaskStatus;
   priority: TaskPriority;
+  itemType: ItemType;
   dueDate: string | null;
   createdAt: string;
   updatedAt: string;
@@ -39,6 +41,7 @@ export interface TaskCreateInput {
   description?: string;
   status?: TaskStatus;
   priority?: TaskPriority;
+  itemType?: ItemType;
   dueDate?: string | null;
   labelIds?: string[];
 }
@@ -48,6 +51,7 @@ export interface TaskUpdateInput {
   description?: string;
   status?: TaskStatus;
   priority?: TaskPriority;
+  itemType?: ItemType;
   dueDate?: string | null;
 }
 
@@ -81,6 +85,7 @@ export type SortOrder = 'asc' | 'desc';
 export interface TaskFilters {
   status?: TaskStatus | 'all';
   priority?: TaskPriority | 'all';
+  itemType?: ItemType | 'all';
   scopeId?: string | null;
   projectId?: string | null;
   generalOnly?: boolean;

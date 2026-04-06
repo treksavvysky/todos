@@ -15,8 +15,11 @@ export async function GET(request: NextRequest) {
   const sortBy = sp.get('sortBy');
   const sortOrder = sp.get('sortOrder');
 
+  const itemType = sp.get('itemType');
+
   if (status) filters.status = status as TaskFilters['status'];
   if (priority) filters.priority = priority as TaskFilters['priority'];
+  if (itemType) filters.itemType = itemType as TaskFilters['itemType'];
   if (scopeId) filters.scopeId = scopeId;
   if (projectId) filters.projectId = projectId;
   if (generalOnly) filters.generalOnly = true;
@@ -40,6 +43,7 @@ export async function POST(request: NextRequest) {
     description: body.description,
     status: body.status,
     priority: body.priority,
+    itemType: body.itemType,
     dueDate: body.dueDate,
     labelIds: body.labelIds,
   });

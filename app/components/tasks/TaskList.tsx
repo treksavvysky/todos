@@ -4,13 +4,17 @@ import { useApp } from '../AppProvider';
 import TaskCard from './TaskCard';
 import EmptyState from '../ui/EmptyState';
 import LoadingSpinner from '../ui/LoadingSpinner';
-import type { TaskStatus, TaskSortBy, SortOrder } from '@/app/lib/types';
+import { ITEM_TYPE_OPTIONS } from './ItemTypeBadge';
+import type { TaskStatus, ItemType, TaskSortBy, SortOrder } from '@/app/lib/types';
 
 const STATUS_TABS: { value: TaskStatus | 'all'; label: string }[] = [
   { value: 'all', label: 'All' },
-  { value: 'pending', label: 'Pending' },
-  { value: 'in_progress', label: 'In Progress' },
-  { value: 'completed', label: 'Completed' },
+  { value: 'ready', label: 'Ready' },
+  { value: 'active', label: 'Active' },
+  { value: 'blocked', label: 'Blocked' },
+  { value: 'waiting', label: 'Waiting' },
+  { value: 'parked', label: 'Parked' },
+  { value: 'done', label: 'Done' },
 ];
 
 const SORT_OPTIONS: { value: TaskSortBy; label: string }[] = [
@@ -23,6 +27,7 @@ const SORT_OPTIONS: { value: TaskSortBy; label: string }[] = [
 export default function TaskList() {
   const { state, dispatch, actions } = useApp();
   const currentStatus = state.filters.status || 'all';
+  const currentItemType = state.filters.itemType || 'all';
   const currentSortBy = state.filters.sortBy || 'created_at';
   const currentSortOrder = state.filters.sortOrder || 'desc';
 
@@ -78,23 +83,23 @@ export default function TaskList() {
           
           <div className="flex items-center gap-2">
             <div className="flex bg-white/10 rounded overflow-hidden border border-white/20">
-              <button 
-                onClick={() => handleBulkUpdateStatus('pending')}
+              <button
+                onClick={() => handleBulkUpdateStatus('ready')}
                 className="px-2 py-1 text-[10px] uppercase font-bold hover:bg-white/10 border-r border-white/20"
               >
-                Pending
+                Ready
               </button>
-              <button 
-                onClick={() => handleBulkUpdateStatus('in_progress')}
+              <button
+                onClick={() => handleBulkUpdateStatus('active')}
                 className="px-2 py-1 text-[10px] uppercase font-bold hover:bg-white/10 border-r border-white/20"
               >
-                In Progress
+                Active
               </button>
-              <button 
-                onClick={() => handleBulkUpdateStatus('completed')}
+              <button
+                onClick={() => handleBulkUpdateStatus('done')}
                 className="px-2 py-1 text-[10px] uppercase font-bold hover:bg-white/10"
               >
-                Completed
+                Done
               </button>
             </div>
             
@@ -169,6 +174,33 @@ export default function TaskList() {
               {currentSortOrder === 'asc' ? '↑' : '↓'}
             </button>
           </div>
+        </div>
+
+        {/* Item type filter tabs */}
+        <div className="flex gap-1 px-4 pb-2">
+          <button
+            onClick={() => dispatch({ type: 'SET_FILTERS', payload: { itemType: 'all' } })}
+            className="px-2.5 py-0.5 text-xs font-medium rounded-md transition-colors"
+            style={{
+              background: currentItemType === 'all' ? 'var(--color-bg-secondary)' : 'transparent',
+              color: currentItemType === 'all' ? 'var(--color-text)' : 'var(--color-text-muted)',
+            }}
+          >
+            All Types
+          </button>
+          {ITEM_TYPE_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => dispatch({ type: 'SET_FILTERS', payload: { itemType: opt.value as ItemType } })}
+              className="px-2.5 py-0.5 text-xs font-medium rounded-md transition-colors"
+              style={{
+                background: currentItemType === opt.value ? 'var(--color-bg-secondary)' : 'transparent',
+                color: currentItemType === opt.value ? 'var(--color-text)' : 'var(--color-text-muted)',
+              }}
+            >
+              {opt.icon} {opt.label}
+            </button>
+          ))}
         </div>
       </div>
 

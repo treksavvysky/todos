@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { useApp } from '../AppProvider';
 import Modal from '../ui/Modal';
-import type { TaskPriority } from '@/app/lib/types';
+import { ITEM_TYPE_OPTIONS } from './ItemTypeBadge';
+import type { TaskPriority, ItemType } from '@/app/lib/types';
 
 interface TaskFormProps {
   onClose: () => void;
@@ -14,6 +15,7 @@ export default function TaskForm({ onClose }: TaskFormProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<TaskPriority>('medium');
+  const [itemType, setItemType] = useState<ItemType>('action');
   const [dueDate, setDueDate] = useState('');
   const [selectedLabelIds, setSelectedLabelIds] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -34,6 +36,7 @@ export default function TaskForm({ onClose }: TaskFormProps) {
         title: title.trim(),
         description: description.trim(),
         priority,
+        itemType,
         dueDate: dueDate || undefined,
         labelIds: selectedLabelIds,
       });
@@ -110,6 +113,30 @@ export default function TaskForm({ onClose }: TaskFormProps) {
               className="w-full px-3 py-2 text-sm border rounded-md outline-none"
               style={inputStyle}
             />
+          </div>
+        </div>
+
+        {/* Item Type */}
+        <div>
+          <label className="block text-xs font-medium mb-2" style={{ color: 'var(--color-text-secondary)' }}>
+            Item Type
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {ITEM_TYPE_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setItemType(opt.value)}
+                className="text-xs px-2.5 py-1 rounded-full border transition-colors"
+                style={{
+                  borderColor: itemType === opt.value ? 'var(--color-primary)' : 'var(--color-border)',
+                  backgroundColor: itemType === opt.value ? 'var(--color-primary)' : 'transparent',
+                  color: itemType === opt.value ? '#ffffff' : 'var(--color-text-secondary)',
+                }}
+              >
+                {opt.icon} {opt.label}
+              </button>
+            ))}
           </div>
         </div>
 

@@ -27,6 +27,7 @@ export async function PATCH(
     description: body.description,
     status: body.status,
     priority: body.priority,
+    itemType: body.itemType,
     dueDate: body.dueDate,
   });
 

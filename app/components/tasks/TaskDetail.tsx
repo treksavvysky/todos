@@ -8,7 +8,8 @@ import LabelSelector from '../labels/LabelSelector';
 import CommentList from '../comments/CommentList';
 import CommentForm from '../comments/CommentForm';
 import ConfirmDialog from '../ui/ConfirmDialog';
-import type { TaskStatus, TaskPriority } from '@/app/lib/types';
+import ItemTypeBadge, { ITEM_TYPE_OPTIONS } from './ItemTypeBadge';
+import type { TaskStatus, TaskPriority, ItemType } from '@/app/lib/types';
 
 export default function TaskDetail() {
   const { state, dispatch, actions } = useApp();
@@ -138,12 +139,12 @@ export default function TaskDetail() {
         {/* Status */}
         <div>
           <label className="block text-xs font-medium mb-1" style={{ color: 'var(--color-text-muted)' }}>Status</label>
-          <div className="flex gap-1.5">
-            {(['pending', 'in_progress', 'completed'] as TaskStatus[]).map((s) => (
+          <div className="flex gap-1.5 flex-wrap">
+            {(['ready', 'active', 'blocked', 'waiting', 'parked', 'done'] as TaskStatus[]).map((s) => (
               <button
                 key={s}
                 onClick={() => handleFieldChange('status', s)}
-                className={task.status === s ? 'opacity-100' : 'opacity-40 hover:opacity-70'}
+                className={`transition-opacity ${task.status === s ? 'opacity-100' : 'opacity-40 hover:opacity-70'}`}
               >
                 <TaskStatusBadge status={s} />
               </button>
@@ -162,6 +163,22 @@ export default function TaskDetail() {
                 className={`transition-opacity ${task.priority === p ? 'opacity-100' : 'opacity-40 hover:opacity-70'}`}
               >
                 <TaskPriorityBadge priority={p} />
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Item Type */}
+        <div>
+          <label className="block text-xs font-medium mb-1" style={{ color: 'var(--color-text-muted)' }}>Item Type</label>
+          <div className="flex gap-1.5 flex-wrap">
+            {ITEM_TYPE_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => handleFieldChange('itemType', opt.value)}
+                className={`transition-opacity ${task.itemType === opt.value ? 'opacity-100' : 'opacity-40 hover:opacity-70'}`}
+              >
+                <ItemTypeBadge itemType={opt.value as ItemType} />
               </button>
             ))}
           </div>

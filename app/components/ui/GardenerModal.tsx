@@ -19,7 +19,7 @@ export default function GardenerModal({ onClose }: GardenerModalProps) {
     try {
       const data = await gardenBacklogAI();
       setInsights(data.insights);
-    } catch (err) {
+    } catch {
       setError('The Gardener is resting. Please try again in a moment.');
     } finally {
       setLoading(false);

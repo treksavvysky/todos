@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { TaskRepository } from '@/app/lib/repositories';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   if (!process.env.GEMINI_API_KEY) {
     return NextResponse.json({ error: 'GEMINI_API_KEY is not configured' }, { status: 500 });
   }
@@ -28,6 +28,7 @@ export async function POST(request: NextRequest) {
         title: t.title,
         status: t.status,
         priority: t.priority,
+        itemType: t.itemType,
         dueDate: t.dueDate,
         createdAt: t.createdAt,
         updatedAt: t.updatedAt
@@ -39,7 +40,8 @@ export async function POST(request: NextRequest) {
       1. Reality Check: Are there too many "Urgent" tasks?
       2. Stale Detection: Identify tasks created long ago but never started.
       3. Decomposition: Suggest breaking down titles that look too complex.
-      4. Work-Life Balance: Group insights by "Physical/Personal" vs "Work/Mental" if applicable.
+      4. Type Balance: Are there unresolved decisions blocking actions? Ideas that should be promoted to actions? Initiatives without supporting actions?
+      5. Work-Life Balance: Group insights by "Physical/Personal" vs "Work/Mental" if applicable.
       
       Format the output as a Markdown-formatted report.
       Use clear headings like "### 🚜 The Reality Check" and "### ✂️ Pruning Suggestions".
@@ -52,8 +54,9 @@ export async function POST(request: NextRequest) {
     
     return NextResponse.json({ insights: text });
 
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('AI Gardener Error:', err);
-    return NextResponse.json({ error: err.message || 'Internal Server Error' }, { status: 500 });
+    const message = err instanceof Error ? err.message : 'Internal Server Error';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -3,6 +3,7 @@
 import type { TaskWithDetails } from '@/app/lib/types';
 import TaskStatusBadge from './TaskStatusBadge';
 import TaskPriorityBadge from './TaskPriorityBadge';
+import ItemTypeBadge from './ItemTypeBadge';
 import LabelBadge from '../labels/LabelBadge';
 
 interface TaskCardProps {
@@ -24,7 +25,8 @@ export default function TaskCard({
     ? new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     : null;
 
-  const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'completed';
+  const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'done';
+  const isDimmed = task.status === 'blocked' || task.status === 'waiting' || task.status === 'parked';
 
   return (
     <div
@@ -54,7 +56,7 @@ export default function TaskCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2 mb-1.5">
             <h3
-              className={`text-sm font-medium leading-tight ${task.status === 'completed' ? 'line-through opacity-60' : ''}`}
+              className={`text-sm font-medium leading-tight ${task.status === 'done' ? 'line-through opacity-60' : ''} ${isDimmed ? 'opacity-50' : ''}`}
               style={{ color: 'var(--color-text)' }}
             >
               {task.title}
@@ -72,6 +74,7 @@ export default function TaskCard({
           )}
 
           <div className="flex items-center gap-2 flex-wrap">
+            <ItemTypeBadge itemType={task.itemType} />
             <TaskStatusBadge status={task.status} />
             {task.labels.map((label) => (
               <LabelBadge key={label.id} label={label} />
