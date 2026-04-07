@@ -11,10 +11,13 @@ import {
 } from 'react';
 import type {
   TaskWithDetails,
+  ObjectiveWithCounts,
   LabelWithCount,
   TaskFilters,
   TaskCreateInput,
   TaskUpdateInput,
+  ObjectiveCreateInput,
+  ObjectiveUpdateInput,
   LabelCreateInput,
   LabelUpdateInput,
 } from '@/app/lib/types';
@@ -25,6 +28,7 @@ import * as api from '@/app/lib/api-client';
 
 interface AppState {
   tasks: TaskWithDetails[];
+  objectives: ObjectiveWithCounts[];
   labels: LabelWithCount[];
   filters: TaskFilters;
   selectedTaskId: string | null;
@@ -36,6 +40,7 @@ interface AppState {
 
 const initialState: AppState = {
   tasks: [],
+  objectives: [],
   labels: [],
   filters: { status: 'all', priority: 'all', scopeId: null, projectId: null, search: '' },
   selectedTaskId: null,
@@ -51,6 +56,7 @@ type Action =
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_ERROR'; payload: string | null }
   | { type: 'SET_TASKS'; payload: TaskWithDetails[] }
+  | { type: 'SET_OBJECTIVES'; payload: ObjectiveWithCounts[] }
   | { type: 'SET_LABELS'; payload: LabelWithCount[] }
   | { type: 'SET_FILTERS'; payload: Partial<TaskFilters> }
   | { type: 'SELECT_TASK'; payload: string | null }
@@ -72,6 +78,8 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, error: action.payload };
     case 'SET_TASKS':
       return { ...state, tasks: action.payload };
+    case 'SET_OBJECTIVES':
+      return { ...state, objectives: action.payload };
     case 'SET_LABELS':
       return { ...state, labels: action.payload };
     case 'SET_FILTERS':
@@ -148,6 +156,9 @@ interface AppActions {
   createLabel: (input: LabelCreateInput) => Promise<void>;
   updateLabel: (id: string, input: LabelUpdateInput) => Promise<void>;
   deleteLabel: (id: string) => Promise<void>;
+  createObjective: (input: ObjectiveCreateInput) => Promise<void>;
+  updateObjective: (id: string, input: ObjectiveUpdateInput) => Promise<void>;
+  deleteObjective: (id: string) => Promise<void>;
 }
 
 // ---- Provider ----
@@ -159,11 +170,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'SET_LOADING', payload: true });
     dispatch({ type: 'SET_ERROR', payload: null });
     try {
-      const [tasks, labels] = await Promise.all([
+      const [tasks, objectives, labels] = await Promise.all([
         api.fetchTasks(state.filters),
+        api.fetchObjectives(),
         api.fetchLabels(),
       ]);
       dispatch({ type: 'SET_TASKS', payload: tasks });
+      dispatch({ type: 'SET_OBJECTIVES', payload: objectives });
       dispatch({ type: 'SET_LABELS', payload: labels });
     } catch (err) {
       dispatch({ type: 'SET_ERROR', payload: err instanceof Error ? err.message : 'Failed to load data' });
@@ -200,9 +213,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       try {
         const task = await api.createTask(input);
         dispatch({ type: 'UPSERT_TASK', payload: task });
-        // Refresh labels to update counts
-        const labels = await api.fetchLabels();
+        // Refresh labels and objectives to update counts
+        const [labels, objectives] = await Promise.all([api.fetchLabels(), api.fetchObjectives()]);
         dispatch({ type: 'SET_LABELS', payload: labels });
+        dispatch({ type: 'SET_OBJECTIVES', payload: objectives });
         dispatch({ type: 'ADD_TOAST', payload: { message: 'Task created', type: 'success' } });
         return task;
       } catch (err) {
@@ -226,8 +240,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       try {
         await api.deleteTask(id);
         dispatch({ type: 'REMOVE_TASK', payload: id });
-        const labels = await api.fetchLabels();
+        const [labels, objectives] = await Promise.all([api.fetchLabels(), api.fetchObjectives()]);
         dispatch({ type: 'SET_LABELS', payload: labels });
+        dispatch({ type: 'SET_OBJECTIVES', payload: objectives });
         dispatch({ type: 'ADD_TOAST', payload: { message: 'Task deleted', type: 'success' } });
       } catch (err) {
         dispatch({ type: 'ADD_TOAST', payload: { message: err instanceof Error ? err.message : 'Failed to delete task', type: 'error' } });
@@ -336,11 +351,46 @@ export function AppProvider({ children }: { children: ReactNode }) {
         await api.deleteLabel(id);
         const labels = await api.fetchLabels();
         dispatch({ type: 'SET_LABELS', payload: labels });
-        // Refetch tasks since label removal may affect them
         const tasks = await api.fetchTasks(state.filters);
         dispatch({ type: 'SET_TASKS', payload: tasks });
       } catch (err) {
         dispatch({ type: 'ADD_TOAST', payload: { message: err instanceof Error ? err.message : 'Failed to delete label', type: 'error' } });
+        throw err;
+      }
+    },
+
+    createObjective: async (input) => {
+      try {
+        await api.createObjective(input);
+        const objectives = await api.fetchObjectives();
+        dispatch({ type: 'SET_OBJECTIVES', payload: objectives });
+        dispatch({ type: 'ADD_TOAST', payload: { message: 'Objective created', type: 'success' } });
+      } catch (err) {
+        dispatch({ type: 'ADD_TOAST', payload: { message: err instanceof Error ? err.message : 'Failed to create objective', type: 'error' } });
+        throw err;
+      }
+    },
+
+    updateObjective: async (id, input) => {
+      try {
+        await api.updateObjective(id, input);
+        const objectives = await api.fetchObjectives();
+        dispatch({ type: 'SET_OBJECTIVES', payload: objectives });
+      } catch (err) {
+        dispatch({ type: 'ADD_TOAST', payload: { message: err instanceof Error ? err.message : 'Failed to update objective', type: 'error' } });
+        throw err;
+      }
+    },
+
+    deleteObjective: async (id) => {
+      try {
+        await api.deleteObjective(id);
+        const [objectives, tasks] = await Promise.all([api.fetchObjectives(), api.fetchTasks(state.filters)]);
+        dispatch({ type: 'SET_OBJECTIVES', payload: objectives });
+        dispatch({ type: 'SET_TASKS', payload: tasks });
+        dispatch({ type: 'ADD_TOAST', payload: { message: 'Objective deleted', type: 'success' } });
+      } catch (err) {
+        dispatch({ type: 'ADD_TOAST', payload: { message: err instanceof Error ? err.message : 'Failed to delete objective', type: 'error' } });
         throw err;
       }
     },

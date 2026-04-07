@@ -2,12 +2,16 @@ import { getDb } from './db';
 import { generateId, nowISO } from './utils';
 import type {
   Task,
+  Objective,
   Label,
   Comment,
   TaskWithDetails,
+  ObjectiveWithCounts,
   LabelWithCount,
   TaskCreateInput,
   TaskUpdateInput,
+  ObjectiveCreateInput,
+  ObjectiveUpdateInput,
   LabelCreateInput,
   LabelUpdateInput,
   TaskFilters,
@@ -23,7 +27,20 @@ function rowToTask(row: Record<string, unknown>): Task {
     status: row.status as Task['status'],
     priority: row.priority as Task['priority'],
     itemType: (row.item_type as Task['itemType']) || 'action',
+    objectiveId: (row.objective_id as string) || null,
+    parentItemId: (row.parent_item_id as string) || null,
     dueDate: (row.due_date as string) || null,
+    createdAt: row.created_at as string,
+    updatedAt: row.updated_at as string,
+  };
+}
+
+function rowToObjective(row: Record<string, unknown>): Objective {
+  return {
+    id: row.id as string,
+    title: row.title as string,
+    objectiveType: row.objective_type as Objective['objectiveType'],
+    description: row.description as string,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };
@@ -79,6 +96,17 @@ export const TaskRepository = {
     if (filters.itemType && filters.itemType !== 'all') {
       conditions.push('t.item_type = ?');
       params.push(filters.itemType);
+    }
+    if (filters.objectiveId) {
+      conditions.push('t.objective_id = ?');
+      params.push(filters.objectiveId);
+    }
+    if (filters.parentItemId) {
+      conditions.push('t.parent_item_id = ?');
+      params.push(filters.parentItemId);
+    }
+    if (filters.orphanedOnly) {
+      conditions.push('t.objective_id IS NULL AND t.parent_item_id IS NULL');
     }
     if (filters.generalOnly) {
       conditions.push('NOT EXISTS (SELECT 1 FROM task_labels tl JOIN labels l ON tl.label_id = l.id WHERE tl.task_id = t.id AND l.kind = ?)');
@@ -141,8 +169,8 @@ export const TaskRepository = {
     const now = nowISO();
 
     db.prepare(`
-      INSERT INTO tasks (id, title, description, status, priority, item_type, due_date, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO tasks (id, title, description, status, priority, item_type, objective_id, parent_item_id, due_date, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       input.title,
@@ -150,6 +178,8 @@ export const TaskRepository = {
       input.status || 'ready',
       input.priority || 'medium',
       input.itemType || 'action',
+      input.objectiveId || null,
+      input.parentItemId || null,
       input.dueDate || null,
       now,
       now,
@@ -175,6 +205,8 @@ export const TaskRepository = {
     if (input.status !== undefined) { sets.push('status = ?'); params.push(input.status); }
     if (input.priority !== undefined) { sets.push('priority = ?'); params.push(input.priority); }
     if (input.itemType !== undefined) { sets.push('item_type = ?'); params.push(input.itemType); }
+    if (input.objectiveId !== undefined) { sets.push('objective_id = ?'); params.push(input.objectiveId); }
+    if (input.parentItemId !== undefined) { sets.push('parent_item_id = ?'); params.push(input.parentItemId); }
     if (input.dueDate !== undefined) { sets.push('due_date = ?'); params.push(input.dueDate); }
 
     if (sets.length > 0) {
@@ -282,6 +314,72 @@ export const LabelRepository = {
   remove(id: string): boolean {
     const db = getDb();
     const result = db.prepare('DELETE FROM labels WHERE id = ?').run(id);
+    return result.changes > 0;
+  },
+};
+
+// ---- Objective Repository ----
+
+export const ObjectiveRepository = {
+  list(): ObjectiveWithCounts[] {
+    const db = getDb();
+    const rows = db.prepare(`
+      SELECT o.*, COUNT(t.id) as item_count
+      FROM objectives o
+      LEFT JOIN tasks t ON t.objective_id = o.id
+      GROUP BY o.id
+      ORDER BY o.objective_type, o.title
+    `).all() as Record<string, unknown>[];
+
+    return rows.map((row) => ({
+      ...rowToObjective(row),
+      itemCount: row.item_count as number,
+    }));
+  },
+
+  getById(id: string): Objective | null {
+    const db = getDb();
+    const row = db.prepare('SELECT * FROM objectives WHERE id = ?').get(id) as Record<string, unknown> | undefined;
+    return row ? rowToObjective(row) : null;
+  },
+
+  create(input: ObjectiveCreateInput): Objective {
+    const db = getDb();
+    const id = generateId();
+    const now = nowISO();
+
+    db.prepare(`
+      INSERT INTO objectives (id, title, objective_type, description, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(id, input.title, input.objectiveType, input.description || '', now, now);
+
+    return ObjectiveRepository.getById(id)!;
+  },
+
+  update(id: string, input: ObjectiveUpdateInput): Objective | null {
+    const db = getDb();
+    const existing = db.prepare('SELECT id FROM objectives WHERE id = ?').get(id);
+    if (!existing) return null;
+
+    const sets: string[] = [];
+    const params: unknown[] = [];
+
+    if (input.title !== undefined) { sets.push('title = ?'); params.push(input.title); }
+    if (input.description !== undefined) { sets.push('description = ?'); params.push(input.description); }
+
+    if (sets.length > 0) {
+      sets.push('updated_at = ?');
+      params.push(nowISO());
+      params.push(id);
+      db.prepare(`UPDATE objectives SET ${sets.join(', ')} WHERE id = ?`).run(...params);
+    }
+
+    return ObjectiveRepository.getById(id);
+  },
+
+  remove(id: string): boolean {
+    const db = getDb();
+    const result = db.prepare('DELETE FROM objectives WHERE id = ?').run(id);
     return result.changes > 0;
   },
 };

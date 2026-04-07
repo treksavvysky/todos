@@ -29,6 +29,8 @@ export async function POST() {
         status: t.status,
         priority: t.priority,
         itemType: t.itemType,
+        objectiveId: t.objectiveId,
+        parentItemId: t.parentItemId,
         dueDate: t.dueDate,
         createdAt: t.createdAt,
         updatedAt: t.updatedAt
@@ -41,7 +43,8 @@ export async function POST() {
       2. Stale Detection: Identify tasks created long ago but never started.
       3. Decomposition: Suggest breaking down titles that look too complex.
       4. Type Balance: Are there unresolved decisions blocking actions? Ideas that should be promoted to actions? Initiatives without supporting actions?
-      5. Work-Life Balance: Group insights by "Physical/Personal" vs "Work/Mental" if applicable.
+      5. Orphaned Items: Flag items with null objectiveId and null parentItemId — these are unbound and need to be anchored to an objective or parent.
+      6. Work-Life Balance: Group insights by "Physical/Personal" vs "Work/Mental" if applicable.
       
       Format the output as a Markdown-formatted report.
       Use clear headings like "### 🚜 The Reality Check" and "### ✂️ Pruning Suggestions".

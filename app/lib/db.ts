@@ -20,6 +20,15 @@ export function getDb(): Database.Database {
 
 function runMigrations(db: Database.Database): void {
   db.exec(`
+    CREATE TABLE IF NOT EXISTS objectives (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      objective_type TEXT NOT NULL CHECK (objective_type IN ('mission', 'parking_lot')),
+      description TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS tasks (
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL,
@@ -30,6 +39,8 @@ function runMigrations(db: Database.Database): void {
         CHECK (priority IN ('low', 'medium', 'high', 'urgent')),
       item_type TEXT NOT NULL DEFAULT 'action'
         CHECK (item_type IN ('action', 'decision', 'initiative', 'idea', 'maintenance')),
+      objective_id TEXT REFERENCES objectives(id) ON DELETE SET NULL,
+      parent_item_id TEXT REFERENCES tasks(id) ON DELETE SET NULL,
       due_date TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
@@ -120,28 +131,50 @@ function runMigrations(db: Database.Database): void {
     db.pragma('foreign_keys = ON');
   }
 
+  // Migration: add objective_id and parent_item_id columns to existing databases
+  const taskCols = db.prepare("PRAGMA table_info(tasks)").all() as { name: string }[];
+  if (!taskCols.some(c => c.name === 'objective_id')) {
+    db.exec("ALTER TABLE tasks ADD COLUMN objective_id TEXT REFERENCES objectives(id) ON DELETE SET NULL");
+  }
+  if (!taskCols.some(c => c.name === 'parent_item_id')) {
+    db.exec("ALTER TABLE tasks ADD COLUMN parent_item_id TEXT REFERENCES tasks(id) ON DELETE SET NULL");
+  }
+
+  db.exec("CREATE INDEX IF NOT EXISTS idx_tasks_objective ON tasks(objective_id)");
+  db.exec("CREATE INDEX IF NOT EXISTS idx_tasks_parent_item ON tasks(parent_item_id)");
+
   seedDefaults(db);
 }
 
 function seedDefaults(db: Database.Database): void {
-  const existing = db.prepare('SELECT COUNT(*) as count FROM labels WHERE kind = ?').get('scope') as { count: number };
-  if (existing.count > 0) return;
-
-  const insert = db.prepare('INSERT INTO labels (id, name, kind, color, created_at) VALUES (?, ?, ?, ?, ?)');
   const now = new Date().toISOString();
 
-  const defaults = [
-    { id: generateId(), name: 'Personal', color: '#22c55e' },
-    { id: generateId(), name: 'Work', color: '#3b82f6' },
-    { id: generateId(), name: 'Financial', color: '#eab308' },
-    { id: generateId(), name: 'Health', color: '#ef4444' },
-  ];
+  // Seed default labels
+  const existingLabels = db.prepare('SELECT COUNT(*) as count FROM labels WHERE kind = ?').get('scope') as { count: number };
+  if (existingLabels.count === 0) {
+    const insertLabel = db.prepare('INSERT INTO labels (id, name, kind, color, created_at) VALUES (?, ?, ?, ?, ?)');
+    const labelDefaults = [
+      { id: generateId(), name: 'Personal', color: '#22c55e' },
+      { id: generateId(), name: 'Work', color: '#3b82f6' },
+      { id: generateId(), name: 'Financial', color: '#eab308' },
+      { id: generateId(), name: 'Health', color: '#ef4444' },
+    ];
+    const seedLabels = db.transaction(() => {
+      for (const scope of labelDefaults) {
+        insertLabel.run(scope.id, scope.name, 'scope', scope.color, now);
+      }
+    });
+    seedLabels();
+  }
 
-  const seedAll = db.transaction(() => {
-    for (const scope of defaults) {
-      insert.run(scope.id, scope.name, 'scope', scope.color, now);
-    }
-  });
-
-  seedAll();
+  // Seed default objectives
+  const existingObjectives = db.prepare('SELECT COUNT(*) as count FROM objectives').get() as { count: number };
+  if (existingObjectives.count === 0) {
+    const insertObj = db.prepare('INSERT INTO objectives (id, title, objective_type, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)');
+    const seedObjectives = db.transaction(() => {
+      insertObj.run(generateId(), 'Inbox', 'mission', 'Default landing zone for new items awaiting binding.', now, now);
+      insertObj.run(generateId(), 'Parking Lot', 'parking_lot', 'Items intentionally set aside — not abandoned, just not now.', now, now);
+    });
+    seedObjectives();
+  }
 }

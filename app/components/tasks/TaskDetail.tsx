@@ -200,6 +200,48 @@ export default function TaskDetail() {
           />
         </div>
 
+        {/* Objective Binding */}
+        <div>
+          <label className="block text-xs font-medium mb-1" style={{ color: 'var(--color-text-muted)' }}>
+            Objective
+            {!task.objectiveId && !task.parentItemId && (
+              <span className="ml-2 text-[10px] font-bold text-amber-600">⚠️ Unbound</span>
+            )}
+          </label>
+          <select
+            value={task.objectiveId || ''}
+            onChange={(e) => handleFieldChange('objectiveId', e.target.value || null)}
+            className="w-full px-2 py-1 text-sm border rounded outline-none"
+            style={{ background: 'var(--color-bg)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
+          >
+            <option value="">None</option>
+            {state.objectives.map((obj) => (
+              <option key={obj.id} value={obj.id}>
+                {obj.objectiveType === 'mission' ? '🎯' : '🅿️'} {obj.title}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Parent Item */}
+        <div>
+          <label className="block text-xs font-medium mb-1" style={{ color: 'var(--color-text-muted)' }}>Parent Item</label>
+          <select
+            value={task.parentItemId || ''}
+            onChange={(e) => handleFieldChange('parentItemId', e.target.value || null)}
+            className="w-full px-2 py-1 text-sm border rounded outline-none"
+            style={{ background: 'var(--color-bg)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
+          >
+            <option value="">None</option>
+            {state.tasks
+              .filter((t) => (t.itemType === 'initiative' || t.itemType === 'maintenance') && t.id !== task.id)
+              .map((t) => (
+                <option key={t.id} value={t.id}>{t.title}</option>
+              ))
+            }
+          </select>
+        </div>
+
         {/* Labels */}
         <div>
           <label className="block text-xs font-medium mb-2" style={{ color: 'var(--color-text-muted)' }}>

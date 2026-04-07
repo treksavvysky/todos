@@ -3,9 +3,19 @@
 export type TaskStatus = 'ready' | 'active' | 'blocked' | 'waiting' | 'parked' | 'done';
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
 export type ItemType = 'action' | 'decision' | 'initiative' | 'idea' | 'maintenance';
+export type ObjectiveType = 'mission' | 'parking_lot';
 export type LabelKind = 'scope' | 'project';
 
 // ---- Core Entities ----
+
+export interface Objective {
+  id: string;
+  title: string;
+  objectiveType: ObjectiveType;
+  description: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface Task {
   id: string;
@@ -14,6 +24,8 @@ export interface Task {
   status: TaskStatus;
   priority: TaskPriority;
   itemType: ItemType;
+  objectiveId: string | null;
+  parentItemId: string | null;
   dueDate: string | null;
   createdAt: string;
   updatedAt: string;
@@ -42,6 +54,8 @@ export interface TaskCreateInput {
   status?: TaskStatus;
   priority?: TaskPriority;
   itemType?: ItemType;
+  objectiveId?: string | null;
+  parentItemId?: string | null;
   dueDate?: string | null;
   labelIds?: string[];
 }
@@ -52,7 +66,20 @@ export interface TaskUpdateInput {
   status?: TaskStatus;
   priority?: TaskPriority;
   itemType?: ItemType;
+  objectiveId?: string | null;
+  parentItemId?: string | null;
   dueDate?: string | null;
+}
+
+export interface ObjectiveCreateInput {
+  title: string;
+  objectiveType: ObjectiveType;
+  description?: string;
+}
+
+export interface ObjectiveUpdateInput {
+  title?: string;
+  description?: string;
 }
 
 export interface LabelCreateInput {
@@ -77,6 +104,10 @@ export interface LabelWithCount extends Label {
   taskCount: number;
 }
 
+export interface ObjectiveWithCounts extends Objective {
+  itemCount: number;
+}
+
 export type TaskSortBy = 'created_at' | 'due_date' | 'priority' | 'title';
 export type SortOrder = 'asc' | 'desc';
 
@@ -86,6 +117,9 @@ export interface TaskFilters {
   status?: TaskStatus | 'all';
   priority?: TaskPriority | 'all';
   itemType?: ItemType | 'all';
+  objectiveId?: string | null;
+  parentItemId?: string | null;
+  orphanedOnly?: boolean;
   scopeId?: string | null;
   projectId?: string | null;
   generalOnly?: boolean;

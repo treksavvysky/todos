@@ -1,10 +1,14 @@
 import type {
   TaskWithDetails,
+  Objective,
+  ObjectiveWithCounts,
   LabelWithCount,
   Label,
   Comment,
   TaskCreateInput,
   TaskUpdateInput,
+  ObjectiveCreateInput,
+  ObjectiveUpdateInput,
   LabelCreateInput,
   LabelUpdateInput,
   TaskFilters,
@@ -31,6 +35,9 @@ export async function fetchTasks(filters: TaskFilters = {}): Promise<TaskWithDet
   if (filters.status && filters.status !== 'all') params.set('status', filters.status);
   if (filters.priority && filters.priority !== 'all') params.set('priority', filters.priority);
   if (filters.itemType && filters.itemType !== 'all') params.set('itemType', filters.itemType);
+  if (filters.objectiveId) params.set('objectiveId', filters.objectiveId);
+  if (filters.parentItemId) params.set('parentItemId', filters.parentItemId);
+  if (filters.orphanedOnly) params.set('orphanedOnly', 'true');
   if (filters.scopeId) params.set('scopeId', filters.scopeId);
   if (filters.projectId) params.set('projectId', filters.projectId);
   if (filters.generalOnly) params.set('generalOnly', 'true');
@@ -78,6 +85,31 @@ export async function addComment(taskId: string, content: string): Promise<Comme
     method: 'POST',
     body: JSON.stringify({ content }),
   });
+}
+
+// ---- Objectives ----
+
+export async function fetchObjectives(): Promise<ObjectiveWithCounts[]> {
+  const data = await request<{ objectives: ObjectiveWithCounts[] }>('/api/objectives');
+  return data.objectives;
+}
+
+export async function createObjective(input: ObjectiveCreateInput): Promise<Objective> {
+  return request<Objective>('/api/objectives', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updateObjective(id: string, input: ObjectiveUpdateInput): Promise<Objective> {
+  return request<Objective>(`/api/objectives/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function deleteObjective(id: string): Promise<void> {
+  await request(`/api/objectives/${id}`, { method: 'DELETE' });
 }
 
 // ---- Labels ----

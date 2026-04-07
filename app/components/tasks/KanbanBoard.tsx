@@ -214,6 +214,7 @@ export default function KanbanBoard() {
                                 isBulkSelected={state.bulkSelection.has(task.id)}
                                 onSelect={(id) => dispatch({ type: 'SELECT_TASK', payload: id })}
                                 onBulkSelect={(id) => dispatch({ type: 'TOGGLE_BULK_SELECT', payload: id })}
+                                objectives={state.objectives}
                               />
 
                               {/* Quick Move Controls */}

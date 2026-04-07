@@ -7,7 +7,7 @@ import Modal from '../ui/Modal';
 import GardenerModal from '../ui/GardenerModal';
 import ContextMenu from '../ui/ContextMenu';
 import ConfirmDialog from '../ui/ConfirmDialog';
-import type { LabelKind, LabelWithCount } from '@/app/lib/types';
+import type { LabelKind, LabelWithCount, ObjectiveType } from '@/app/lib/types';
 
 interface ContextMenuState {
   label: LabelWithCount;
@@ -27,21 +27,51 @@ export default function Sidebar({ onSelect }: SidebarProps) {
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<LabelWithCount | null>(null);
   const [showGardener, setShowGardener] = useState(false);
+  const [showObjectiveForm, setShowObjectiveForm] = useState(false);
+  const [objectiveFormType, setObjectiveFormType] = useState<ObjectiveType>('mission');
+  const [objectiveTitle, setObjectiveTitle] = useState('');
 
   const scopes = state.labels.filter((l) => l.kind === 'scope');
   const projects = state.labels.filter((l) => l.kind === 'project');
+  const missions = state.objectives.filter((o) => o.objectiveType === 'mission');
+  const parkingLots = state.objectives.filter((o) => o.objectiveType === 'parking_lot');
 
   const activeScope = state.filters.scopeId;
   const activeProject = state.filters.projectId;
+  const activeObjective = state.filters.objectiveId;
+  const isOrphaned = state.filters.orphanedOnly;
   const isGeneralOnly = state.filters.generalOnly;
-  const isAllTasks = !activeScope && !activeProject && !isGeneralOnly;
+  const isAllTasks = !activeScope && !activeProject && !isGeneralOnly && !activeObjective && !isOrphaned;
 
   const handleAllTasksClick = () => {
     dispatch({
       type: 'SET_FILTERS',
-      payload: { scopeId: null, projectId: null, generalOnly: false },
+      payload: { scopeId: null, projectId: null, objectiveId: null, orphanedOnly: false, generalOnly: false },
     });
     onSelect?.();
+  };
+
+  const handleObjectiveClick = (id: string) => {
+    dispatch({
+      type: 'SET_FILTERS',
+      payload: { objectiveId: activeObjective === id ? null : id, scopeId: null, projectId: null, orphanedOnly: false, generalOnly: false },
+    });
+    onSelect?.();
+  };
+
+  const handleOrphanedClick = () => {
+    dispatch({
+      type: 'SET_FILTERS',
+      payload: { orphanedOnly: !isOrphaned, objectiveId: null, scopeId: null, projectId: null, generalOnly: false },
+    });
+    onSelect?.();
+  };
+
+  const handleCreateObjective = async () => {
+    if (!objectiveTitle.trim()) return;
+    await actions.createObjective({ title: objectiveTitle.trim(), objectiveType: objectiveFormType });
+    setObjectiveTitle('');
+    setShowObjectiveForm(false);
   };
 
   const handleGeneralClick = () => {
@@ -132,6 +162,73 @@ export default function Sidebar({ onSelect }: SidebarProps) {
           <span className="group-hover:animate-bounce">🧑‍🌾</span>
           Garden Review
         </button>
+      </div>
+
+      {/* Objectives */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>
+            Objectives
+          </h2>
+          <button
+            onClick={() => setShowObjectiveForm(true)}
+            className="text-xs px-1.5 py-0.5 rounded hover:opacity-80"
+            style={{ color: 'var(--color-primary)' }}
+          >
+            + Add
+          </button>
+        </div>
+        <ul className="flex flex-col gap-1">
+          {missions.map((obj) => (
+            <li key={obj.id}>
+              <button
+                onClick={() => handleObjectiveClick(obj.id)}
+                className="w-full flex items-center justify-between px-2 py-1.5 rounded-md text-sm transition-colors"
+                style={{
+                  background: activeObjective === obj.id ? 'var(--color-bg-secondary)' : 'transparent',
+                  color: activeObjective === obj.id ? 'var(--color-text)' : 'var(--color-text-secondary)',
+                }}
+              >
+                <span className="flex items-center gap-2">
+                  <span>🎯</span>
+                  {obj.title}
+                </span>
+                <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{obj.itemCount}</span>
+              </button>
+            </li>
+          ))}
+          {parkingLots.map((obj) => (
+            <li key={obj.id}>
+              <button
+                onClick={() => handleObjectiveClick(obj.id)}
+                className="w-full flex items-center justify-between px-2 py-1.5 rounded-md text-sm transition-colors"
+                style={{
+                  background: activeObjective === obj.id ? 'var(--color-bg-secondary)' : 'transparent',
+                  color: activeObjective === obj.id ? 'var(--color-text)' : 'var(--color-text-secondary)',
+                }}
+              >
+                <span className="flex items-center gap-2">
+                  <span>🅿️</span>
+                  {obj.title}
+                </span>
+                <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{obj.itemCount}</span>
+              </button>
+            </li>
+          ))}
+          <li>
+            <button
+              onClick={handleOrphanedClick}
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors"
+              style={{
+                background: isOrphaned ? 'var(--color-bg-secondary)' : 'transparent',
+                color: isOrphaned ? '#dc2626' : 'var(--color-text-muted)',
+              }}
+            >
+              <span>⚠️</span>
+              Unbound
+            </button>
+          </li>
+        </ul>
       </div>
 
       {/* Scopes */}
@@ -258,6 +355,57 @@ export default function Sidebar({ onSelect }: SidebarProps) {
 
       {showGardener && (
         <GardenerModal onClose={() => setShowGardener(false)} />
+      )}
+
+      {showObjectiveForm && (
+        <Modal title="New Objective" onClose={() => { setShowObjectiveForm(false); setObjectiveTitle(''); }}>
+          <div className="flex flex-col gap-3">
+            <input
+              type="text"
+              value={objectiveTitle}
+              onChange={(e) => setObjectiveTitle(e.target.value)}
+              placeholder="Objective title"
+              className="w-full px-3 py-2 text-sm border rounded-md outline-none focus:ring-2 focus:ring-indigo-400"
+              style={{ background: 'var(--color-bg)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
+              autoFocus
+              onKeyDown={(e) => { if (e.key === 'Enter') handleCreateObjective(); }}
+            />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setObjectiveFormType('mission')}
+                className="flex-1 px-3 py-1.5 text-sm rounded-md border transition-colors"
+                style={{
+                  borderColor: objectiveFormType === 'mission' ? 'var(--color-primary)' : 'var(--color-border)',
+                  backgroundColor: objectiveFormType === 'mission' ? 'var(--color-primary)' : 'transparent',
+                  color: objectiveFormType === 'mission' ? '#ffffff' : 'var(--color-text-secondary)',
+                }}
+              >
+                🎯 Mission
+              </button>
+              <button
+                type="button"
+                onClick={() => setObjectiveFormType('parking_lot')}
+                className="flex-1 px-3 py-1.5 text-sm rounded-md border transition-colors"
+                style={{
+                  borderColor: objectiveFormType === 'parking_lot' ? 'var(--color-primary)' : 'var(--color-border)',
+                  backgroundColor: objectiveFormType === 'parking_lot' ? 'var(--color-primary)' : 'transparent',
+                  color: objectiveFormType === 'parking_lot' ? '#ffffff' : 'var(--color-text-secondary)',
+                }}
+              >
+                🅿️ Parking Lot
+              </button>
+            </div>
+            <button
+              onClick={handleCreateObjective}
+              disabled={!objectiveTitle.trim()}
+              className="px-4 py-1.5 text-sm rounded-md text-white disabled:opacity-50"
+              style={{ backgroundColor: 'var(--color-primary)' }}
+            >
+              Create
+            </button>
+          </div>
+        </Modal>
       )}
     </aside>
   );

@@ -4,8 +4,8 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { TaskRepository, LabelRepository } from "../app/lib/repositories.js";
-import type { TaskFilters, TaskUpdateInput, TaskCreateInput } from "../app/lib/types.js";
+import { TaskRepository, LabelRepository, ObjectiveRepository } from "../app/lib/repositories.js";
+import type { TaskFilters, TaskUpdateInput, TaskCreateInput, ObjectiveCreateInput, ObjectiveUpdateInput } from "../app/lib/types.js";
 
 const server = new Server(
   {
@@ -34,6 +34,9 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             status: { type: "string", enum: ["ready", "active", "blocked", "waiting", "parked", "done", "all"] },
             priority: { type: "string", enum: ["low", "medium", "high", "urgent", "all"] },
             itemType: { type: "string", enum: ["action", "decision", "initiative", "idea", "maintenance", "all"], description: "Filter by item type" },
+            objectiveId: { type: "string", description: "Filter by objective ID" },
+            parentItemId: { type: "string", description: "Filter by parent item ID" },
+            orphanedOnly: { type: "boolean", description: "Only show unbound items" },
             search: { type: "string", description: "Search term for task titles" },
             scopeId: { type: "string" },
             projectId: { type: "string" },
@@ -61,6 +64,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             description: { type: "string" },
             priority: { type: "string", enum: ["low", "medium", "high", "urgent"] },
             itemType: { type: "string", enum: ["action", "decision", "initiative", "idea", "maintenance"], description: "The kind of work this item represents. Defaults to 'action'." },
+            objectiveId: { type: "string", description: "ID of the parent objective (mission or parking lot)" },
+            parentItemId: { type: "string", description: "ID of the parent item (initiative or maintenance)" },
             dueDate: { type: "string", description: "ISO date string (YYYY-MM-DD)" },
             labelIds: { type: "array", items: { type: "string" } },
           },
@@ -79,6 +84,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             status: { type: "string", enum: ["ready", "active", "blocked", "waiting", "parked", "done"] },
             priority: { type: "string", enum: ["low", "medium", "high", "urgent"] },
             itemType: { type: "string", enum: ["action", "decision", "initiative", "idea", "maintenance"] },
+            objectiveId: { type: "string", description: "ID of the parent objective. Pass null to unbind." },
+            parentItemId: { type: "string", description: "ID of the parent item. Pass null to unbind." },
             dueDate: { type: "string" },
           },
           required: ["id"],
@@ -92,6 +99,46 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           properties: {
             id: { type: "string" },
           },
+          required: ["id"],
+        },
+      },
+      {
+        name: "list_objectives",
+        description: "Fetch all objectives (missions and parking lots) with item counts.",
+        inputSchema: { type: "object", properties: {} },
+      },
+      {
+        name: "create_objective",
+        description: "Create a new objective (mission or parking lot).",
+        inputSchema: {
+          type: "object",
+          properties: {
+            title: { type: "string" },
+            objectiveType: { type: "string", enum: ["mission", "parking_lot"] },
+            description: { type: "string" },
+          },
+          required: ["title", "objectiveType"],
+        },
+      },
+      {
+        name: "update_objective",
+        description: "Update an existing objective.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            id: { type: "string" },
+            title: { type: "string" },
+            description: { type: "string" },
+          },
+          required: ["id"],
+        },
+      },
+      {
+        name: "delete_objective",
+        description: "Delete an objective. Items bound to it will become unbound.",
+        inputSchema: {
+          type: "object",
+          properties: { id: { type: "string" } },
           required: ["id"],
         },
       },
@@ -150,6 +197,34 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const success = TaskRepository.remove(id);
         return { 
           content: [{ type: "text", text: success ? `Task ${id} deleted` : "Task not found" }],
+          isError: !success
+        };
+      }
+
+      case "list_objectives": {
+        const objectives = ObjectiveRepository.list();
+        return { content: [{ type: "text", text: JSON.stringify(objectives, null, 2) }] };
+      }
+
+      case "create_objective": {
+        const objective = ObjectiveRepository.create(args as unknown as ObjectiveCreateInput);
+        return { content: [{ type: "text", text: `Objective created: ${objective.id}` }] };
+      }
+
+      case "update_objective": {
+        const { id, ...updates } = args as unknown as { id: string } & ObjectiveUpdateInput;
+        const objective = ObjectiveRepository.update(id, updates);
+        return {
+          content: [{ type: "text", text: objective ? `Objective ${id} updated` : "Objective not found" }],
+          isError: !objective
+        };
+      }
+
+      case "delete_objective": {
+        const { id } = args as { id: string };
+        const success = ObjectiveRepository.remove(id);
+        return {
+          content: [{ type: "text", text: success ? `Objective ${id} deleted` : "Objective not found" }],
           isError: !success
         };
       }

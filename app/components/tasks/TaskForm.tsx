@@ -16,6 +16,8 @@ export default function TaskForm({ onClose }: TaskFormProps) {
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<TaskPriority>('medium');
   const [itemType, setItemType] = useState<ItemType>('action');
+  const [objectiveId, setObjectiveId] = useState('');
+  const [parentItemId, setParentItemId] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [selectedLabelIds, setSelectedLabelIds] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -37,6 +39,8 @@ export default function TaskForm({ onClose }: TaskFormProps) {
         description: description.trim(),
         priority,
         itemType,
+        objectiveId: objectiveId || undefined,
+        parentItemId: parentItemId || undefined,
         dueDate: dueDate || undefined,
         labelIds: selectedLabelIds,
       });
@@ -137,6 +141,47 @@ export default function TaskForm({ onClose }: TaskFormProps) {
                 {opt.icon} {opt.label}
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* Objective + Parent binding */}
+        <div className="flex gap-4">
+          <div className="flex-1">
+            <label className="block text-xs font-medium mb-1" style={{ color: 'var(--color-text-secondary)' }}>
+              Objective
+            </label>
+            <select
+              value={objectiveId}
+              onChange={(e) => setObjectiveId(e.target.value)}
+              className="w-full px-3 py-2 text-sm border rounded-md outline-none"
+              style={inputStyle}
+            >
+              <option value="">None</option>
+              {state.objectives.map((obj) => (
+                <option key={obj.id} value={obj.id}>
+                  {obj.objectiveType === 'mission' ? '🎯' : '🅿️'} {obj.title}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex-1">
+            <label className="block text-xs font-medium mb-1" style={{ color: 'var(--color-text-secondary)' }}>
+              Parent Item
+            </label>
+            <select
+              value={parentItemId}
+              onChange={(e) => setParentItemId(e.target.value)}
+              className="w-full px-3 py-2 text-sm border rounded-md outline-none"
+              style={inputStyle}
+            >
+              <option value="">None</option>
+              {state.tasks
+                .filter((t) => t.itemType === 'initiative' || t.itemType === 'maintenance')
+                .map((t) => (
+                  <option key={t.id} value={t.id}>{t.title}</option>
+                ))
+              }
+            </select>
           </div>
         </div>
 

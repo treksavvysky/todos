@@ -28,6 +28,8 @@ export async function PATCH(
     status: body.status,
     priority: body.priority,
     itemType: body.itemType,
+    objectiveId: body.objectiveId,
+    parentItemId: body.parentItemId,
     dueDate: body.dueDate,
   });
 

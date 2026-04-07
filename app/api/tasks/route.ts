@@ -16,10 +16,16 @@ export async function GET(request: NextRequest) {
   const sortOrder = sp.get('sortOrder');
 
   const itemType = sp.get('itemType');
+  const objectiveId = sp.get('objectiveId');
+  const parentItemId = sp.get('parentItemId');
+  const orphanedOnly = sp.get('orphanedOnly') === 'true';
 
   if (status) filters.status = status as TaskFilters['status'];
   if (priority) filters.priority = priority as TaskFilters['priority'];
   if (itemType) filters.itemType = itemType as TaskFilters['itemType'];
+  if (objectiveId) filters.objectiveId = objectiveId;
+  if (parentItemId) filters.parentItemId = parentItemId;
+  if (orphanedOnly) filters.orphanedOnly = true;
   if (scopeId) filters.scopeId = scopeId;
   if (projectId) filters.projectId = projectId;
   if (generalOnly) filters.generalOnly = true;
@@ -44,6 +50,8 @@ export async function POST(request: NextRequest) {
     status: body.status,
     priority: body.priority,
     itemType: body.itemType,
+    objectiveId: body.objectiveId,
+    parentItemId: body.parentItemId,
     dueDate: body.dueDate,
     labelIds: body.labelIds,
   });
