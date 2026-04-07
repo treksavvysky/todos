@@ -8,6 +8,7 @@ import TaskList from './TaskList';
 import KanbanBoard from './KanbanBoard';
 import ObjectivesView from '../objectives/ObjectivesView';
 import NowView from '../now/NowView';
+import ReviewView from '../review/ReviewView';
 import TaskDetail from './TaskDetail';
 import TaskForm from './TaskForm';
 import QuickAdd from './QuickAdd';
@@ -19,7 +20,7 @@ export default function TaskDashboard() {
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<'now' | 'list' | 'kanban' | 'objectives'>('now');
+  const [viewMode, setViewMode] = useState<'now' | 'list' | 'kanban' | 'objectives' | 'review'>('now');
 
   const dismissToast = useCallback((id: string) => {
     dispatch({ type: 'REMOVE_TOAST', payload: id });
@@ -139,6 +140,16 @@ export default function TaskDashboard() {
                 >
                   OBJECTIVES
                 </button>
+                <button
+                  onClick={() => setViewMode('review')}
+                  className="px-2 py-1 text-[10px] font-bold rounded transition-all"
+                  style={{
+                    backgroundColor: viewMode === 'review' ? 'var(--color-primary)' : 'transparent',
+                    color: viewMode === 'review' ? '#ffffff' : 'var(--color-text-muted)',
+                  }}
+                >
+                  REVIEW
+                </button>
               </div>
             </div>
 
@@ -155,6 +166,7 @@ export default function TaskDashboard() {
           {viewMode === 'list' && <TaskList />}
           {viewMode === 'kanban' && <KanbanBoard />}
           {viewMode === 'objectives' && <ObjectivesView />}
+          {viewMode === 'review' && <ReviewView />}
         </div>
 
         {/* Detail panel (Always shown on large screens) */}
