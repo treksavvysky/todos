@@ -5,6 +5,7 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { TaskRepository, LabelRepository, ObjectiveRepository } from "../app/lib/repositories.js";
+import { recommendNextMove } from "../app/lib/recommendation-engine.js";
 import type { TaskFilters, TaskUpdateInput, TaskCreateInput, ObjectiveCreateInput, ObjectiveUpdateInput } from "../app/lib/types.js";
 
 const server = new Server(
@@ -143,6 +144,11 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
+        name: "recommend_next_move",
+        description: "Returns the single highest-scoring ready task as a deterministic recommendation, with a narrative explanation and per-factor score breakdown. Pure query, no side effects. Returns { recommendation: null } when nothing is ready.",
+        inputSchema: { type: "object", properties: {} },
+      },
+      {
         name: "list_labels",
         description: "Fetch all available scopes and projects (labels).",
         inputSchema: {
@@ -218,6 +224,31 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           content: [{ type: "text", text: objective ? `Objective ${id} updated` : "Objective not found" }],
           isError: !objective
         };
+      }
+
+      case "recommend_next_move": {
+        const tasks = TaskRepository.list({ status: 'all' });
+        const recommendation = recommendNextMove(tasks);
+        const payload = recommendation
+          ? {
+              recommendation: {
+                task: {
+                  id: recommendation.task.id,
+                  title: recommendation.task.title,
+                  status: recommendation.task.status,
+                  priority: recommendation.task.priority,
+                  itemType: recommendation.task.itemType,
+                  objectiveId: recommendation.task.objectiveId,
+                  parentItemId: recommendation.task.parentItemId,
+                  createdAt: recommendation.task.createdAt,
+                },
+                score: recommendation.score,
+                factors: recommendation.factors,
+                narrative: recommendation.narrative,
+              },
+            }
+          : { recommendation: null };
+        return { content: [{ type: "text", text: JSON.stringify(payload, null, 2) }] };
       }
 
       case "delete_objective": {

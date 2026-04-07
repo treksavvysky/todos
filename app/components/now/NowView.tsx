@@ -133,7 +133,8 @@ function RecommendedMoveCard({
   onMarkDone: () => void;
   onOpen: () => void;
 }) {
-  const { task, reasons } = move;
+  const [showBreakdown, setShowBreakdown] = useState(false);
+  const { task, factors, narrative, score } = move;
 
   return (
     <div
@@ -170,20 +171,42 @@ function RecommendedMoveCard({
         )}
       </div>
 
-      {reasons.length > 0 && (
-        <div className="flex items-center gap-2 flex-wrap pt-1">
-          <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>
+      {/* Narrative (default) */}
+      <div className="pt-1">
+        <p className="text-sm leading-snug" style={{ color: 'var(--color-text)' }}>
+          <span className="text-[10px] font-bold uppercase tracking-wider mr-2" style={{ color: 'var(--color-text-muted)' }}>
             Why this:
           </span>
-          {reasons.map((r) => (
-            <span
-              key={r}
-              className="text-[10px] font-medium px-2 py-0.5 rounded-full"
-              style={{ background: 'var(--color-bg-secondary)', color: 'var(--color-text-secondary)' }}
-            >
-              {r}
-            </span>
+          {narrative}
+        </p>
+        <button
+          onClick={() => setShowBreakdown((p) => !p)}
+          className="mt-1 text-[11px] font-medium hover:underline"
+          style={{ color: 'var(--color-primary)' }}
+        >
+          {showBreakdown ? 'Hide breakdown' : 'Show breakdown'}
+        </button>
+      </div>
+
+      {/* Per-factor breakdown (expandable) */}
+      {showBreakdown && (
+        <div className="rounded-md border p-3 flex flex-col gap-1" style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' }}>
+          {factors.map((f) => (
+            <div key={f.key} className="flex items-baseline justify-between text-xs">
+              <span style={{ color: 'var(--color-text-secondary)' }}>{f.label}</span>
+              <span className="font-mono font-bold" style={{ color: 'var(--color-text)' }}>
+                +{f.points}
+              </span>
+            </div>
           ))}
+          <div className="flex items-baseline justify-between text-xs pt-1.5 mt-1 border-t" style={{ borderColor: 'var(--color-border)' }}>
+            <span className="font-bold uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>
+              Total
+            </span>
+            <span className="font-mono font-bold" style={{ color: 'var(--color-primary)' }}>
+              {score}
+            </span>
+          </div>
         </div>
       )}
 
@@ -232,15 +255,21 @@ function ActiveFrontCard({
     <div
       className="rounded-lg border p-3 flex flex-col gap-2"
       style={{
+        // Hot fronts: bold primary border + full surface background.
+        // Ready fronts: muted neutral border + tinted background — visible but not dominant.
         borderColor: isHot ? 'var(--color-primary)' : 'var(--color-border)',
-        background: 'var(--color-surface)',
+        background: isHot ? 'var(--color-surface)' : 'var(--color-bg-secondary)',
         borderWidth: isHot ? '2px' : '1px',
+        opacity: isHot ? 1 : 0.85,
       }}
     >
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <span>{isHot ? '🔥' : '🟢'}</span>
-          <h3 className="text-sm font-bold truncate" style={{ color: 'var(--color-text)' }}>
+          <h3
+            className={`truncate ${isHot ? 'text-sm font-bold' : 'text-xs font-semibold'}`}
+            style={{ color: isHot ? 'var(--color-text)' : 'var(--color-text-secondary)' }}
+          >
             {front.objective.title}
           </h3>
         </div>
