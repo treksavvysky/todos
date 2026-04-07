@@ -6,6 +6,8 @@ import Header from '../layout/Header';
 import Sidebar from '../layout/Sidebar';
 import TaskList from './TaskList';
 import KanbanBoard from './KanbanBoard';
+import ObjectivesView from '../objectives/ObjectivesView';
+import NowView from '../now/NowView';
 import TaskDetail from './TaskDetail';
 import TaskForm from './TaskForm';
 import QuickAdd from './QuickAdd';
@@ -17,7 +19,7 @@ export default function TaskDashboard() {
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
+  const [viewMode, setViewMode] = useState<'now' | 'list' | 'kanban' | 'objectives'>('now');
 
   const dismissToast = useCallback((id: string) => {
     dispatch({ type: 'REMOVE_TOAST', payload: id });
@@ -98,6 +100,16 @@ export default function TaskDashboard() {
               
               <div className="flex rounded-md p-0.5 border" style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' }}>
                 <button
+                  onClick={() => setViewMode('now')}
+                  className="px-2 py-1 text-[10px] font-bold rounded transition-all"
+                  style={{
+                    backgroundColor: viewMode === 'now' ? 'var(--color-primary)' : 'transparent',
+                    color: viewMode === 'now' ? '#ffffff' : 'var(--color-text-muted)',
+                  }}
+                >
+                  NOW
+                </button>
+                <button
                   onClick={() => setViewMode('list')}
                   className="px-2 py-1 text-[10px] font-bold rounded transition-all"
                   style={{
@@ -117,6 +129,16 @@ export default function TaskDashboard() {
                 >
                   KANBAN
                 </button>
+                <button
+                  onClick={() => setViewMode('objectives')}
+                  className="px-2 py-1 text-[10px] font-bold rounded transition-all"
+                  style={{
+                    backgroundColor: viewMode === 'objectives' ? 'var(--color-primary)' : 'transparent',
+                    color: viewMode === 'objectives' ? '#ffffff' : 'var(--color-text-muted)',
+                  }}
+                >
+                  OBJECTIVES
+                </button>
               </div>
             </div>
 
@@ -129,7 +151,10 @@ export default function TaskDashboard() {
             </button>
           </div>
 
-          {viewMode === 'list' ? <TaskList /> : <KanbanBoard />}
+          {viewMode === 'now' && <NowView />}
+          {viewMode === 'list' && <TaskList />}
+          {viewMode === 'kanban' && <KanbanBoard />}
+          {viewMode === 'objectives' && <ObjectivesView />}
         </div>
 
         {/* Detail panel (Always shown on large screens) */}
