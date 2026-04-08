@@ -6,7 +6,7 @@ import TaskCard from '../tasks/TaskCard';
 import ItemTypeBadge from '../tasks/ItemTypeBadge';
 import TaskStatusBadge from '../tasks/TaskStatusBadge';
 import TaskPriorityBadge from '../tasks/TaskPriorityBadge';
-import { buildNowSnapshot, type ActiveFront, type NowPulse, type ScoredMove } from '@/app/lib/now-view';
+import { buildNowSnapshot, type ActiveFront, type NowPulse, type ScoredMove, type ParkingMove } from '@/app/lib/now-view';
 import type { TaskWithDetails, ObjectiveWithCounts } from '@/app/lib/types';
 
 export default function NowView() {
@@ -72,6 +72,15 @@ export default function NowView() {
         </section>
       )}
 
+      {snapshot.parkingSuggestions.length > 0 && (
+        <ConsiderParking
+          suggestions={snapshot.parkingSuggestions}
+          objectiveMap={objectiveMap}
+          onPark={(id) => actions.updateTask(id, { status: 'parked' })}
+          onOpen={(id) => dispatch({ type: 'SELECT_TASK', payload: id })}
+        />
+      )}
+
       {(snapshot.blockers.length > 0 || snapshot.waiting.length > 0) && (
         <HoldingPattern
           blockers={snapshot.blockers}
@@ -89,7 +98,7 @@ export default function NowView() {
 function OperationalPulse({ pulse }: { pulse: NowPulse }) {
   return (
     <div
-      className="text-xs font-medium tracking-wider uppercase flex items-center gap-3"
+      className="text-xs font-medium tracking-wider uppercase flex items-center gap-3 flex-wrap"
       style={{ color: 'var(--color-text-muted)' }}
     >
       <span><strong style={{ color: 'var(--color-text)' }}>{pulse.readyCount}</strong> ready</span>
@@ -99,6 +108,14 @@ function OperationalPulse({ pulse }: { pulse: NowPulse }) {
       <span><strong style={{ color: 'var(--color-text)' }}>{pulse.blockedCount}</strong> blocked</span>
       <span>·</span>
       <span><strong style={{ color: 'var(--color-text)' }}>{pulse.waitingCount}</strong> waiting</span>
+      {pulse.coolingCount > 0 && (
+        <>
+          <span>·</span>
+          <span style={{ color: 'var(--color-warning, #d97706)' }}>
+            <strong>{pulse.coolingCount}</strong> cooling
+          </span>
+        </>
+      )}
     </div>
   );
 }
@@ -331,6 +348,157 @@ function DecisionRow({
         </span>
       )}
     </button>
+  );
+}
+
+// ---- Consider Parking (collapsed by default) ----
+//
+// Parking is orientation, not cleanup. This section surfaces items the engine
+// has flagged as cool — sitting in the active field without justification —
+// and gives a one-click "Park" action. A convergent system must narrow, not
+// merely rank. Review Mode handles structural decay (orphans, empty
+// initiatives, 14+ day drift); Consider Parking handles softer cooling
+// pressure in the daily command view.
+
+function ConsiderParking({
+  suggestions,
+  objectiveMap,
+  onPark,
+  onOpen,
+}: {
+  suggestions: ParkingMove[];
+  objectiveMap: Map<string, ObjectiveWithCounts>;
+  onPark: (id: string) => void;
+  onOpen: (id: string) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const visible = suggestions.slice(0, 5);
+  const more = suggestions.length - visible.length;
+
+  return (
+    <section>
+      <button
+        onClick={() => setExpanded((p) => !p)}
+        className="w-full flex items-center gap-2 mb-2 hover:opacity-80"
+      >
+        <span
+          className="text-xs transition-transform"
+          style={{ transform: expanded ? 'rotate(0deg)' : 'rotate(-90deg)' }}
+        >
+          ▼
+        </span>
+        <h2
+          className="text-xs font-bold uppercase tracking-wider"
+          style={{ color: 'var(--color-warning, #d97706)' }}
+        >
+          Consider Parking
+        </h2>
+        <span
+          className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+          style={{
+            background: 'rgba(217, 119, 6, 0.12)',
+            color: 'var(--color-warning, #d97706)',
+          }}
+        >
+          {suggestions.length}
+        </span>
+        <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
+          cooling in the active field
+        </span>
+      </button>
+
+      {expanded && (
+        <div className="flex flex-col gap-1.5">
+          {visible.map((s) => {
+            const objective = s.task.objectiveId ? objectiveMap.get(s.task.objectiveId) : undefined;
+            return (
+              <ParkingRow
+                key={s.task.id}
+                suggestion={s}
+                objective={objective}
+                onPark={() => onPark(s.task.id)}
+                onOpen={() => onOpen(s.task.id)}
+              />
+            );
+          })}
+          {more > 0 && (
+            <p className="text-[10px] px-3 pt-1" style={{ color: 'var(--color-text-muted)' }}>
+              + {more} more cooling item{more === 1 ? '' : 's'}
+            </p>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ParkingRow({
+  suggestion,
+  objective,
+  onPark,
+  onOpen,
+}: {
+  suggestion: ParkingMove;
+  objective?: ObjectiveWithCounts;
+  onPark: () => void;
+  onOpen: () => void;
+}) {
+  const { task, coolness, reasons, topReason } = suggestion;
+  const tooltip = reasons.map((r) => `${r.label} (+${r.points})`).join(' · ') + ` = ${coolness}`;
+
+  return (
+    <div
+      className="rounded-md border px-3 py-2 flex items-center gap-3"
+      style={{
+        borderColor: 'var(--color-border)',
+        background: 'var(--color-bg-secondary)',
+        opacity: 0.85,
+      }}
+    >
+      <button
+        onClick={onOpen}
+        className="flex-1 min-w-0 text-left flex items-center gap-2 hover:opacity-80"
+      >
+        <ItemTypeBadge itemType={task.itemType} />
+        <span
+          className="truncate text-sm"
+          style={{ color: 'var(--color-text-secondary)' }}
+        >
+          {task.title}
+        </span>
+        {objective && (
+          <span
+            className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0"
+            style={{ backgroundColor: 'var(--color-surface)', color: 'var(--color-text-muted)' }}
+          >
+            {objective.objectiveType === 'mission' ? '🎯' : '🅿️'} {objective.title}
+          </span>
+        )}
+        <span
+          className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0"
+          style={{
+            background: 'rgba(217, 119, 6, 0.12)',
+            color: 'var(--color-warning, #d97706)',
+          }}
+          title={tooltip}
+        >
+          {topReason}
+        </span>
+      </button>
+
+      <button
+        onClick={onPark}
+        className="text-[11px] font-bold px-2.5 py-1 rounded-md border flex-shrink-0 hover:opacity-80 transition-opacity"
+        style={{
+          borderColor: 'var(--color-warning, #d97706)',
+          color: 'var(--color-warning, #d97706)',
+          background: 'transparent',
+        }}
+        title="Move to parked status"
+      >
+        🅿️ Park
+      </button>
+    </div>
   );
 }
 

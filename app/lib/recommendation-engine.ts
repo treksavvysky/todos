@@ -287,3 +287,136 @@ export function recommendNextMove<T extends EngineTask>(tasks: T[]): Recommendat
   const ranked = rankRecommendations(tasks);
   return ranked[0] ?? null;
 }
+
+// ---- Parking pressure (inverse heat) -----------------------------------
+//
+// The recommendation engine answers "what matters now?". The parking engine
+// answers the inverse: "what should leave the active field?". Both are part
+// of convergence — a system that only ranks work is still serving
+// accumulation.
+//
+// Parking is orientation, not cleanup. Review Mode handles structural decay
+// (orphans, vague titles, empty initiatives, 14+ day drift). Parking Pressure
+// handles a softer signal: items sitting in the active field without
+// justification — cooling fronts, low-value ready items, long-held work.
+//
+// Eligible candidates: ready / blocked / waiting. Active items are in motion
+// and should not be pushed aside. Done / parked are already out of field.
+//
+// Hard gates (never suggest parking):
+//   - status is active / done / parked
+//   - priority is urgent
+//   - task is on a hot front (momentum protects the whole objective)
+//   - task is fresh (< 3 days old — hasn't had time to prove itself)
+//
+// Coolness factors accumulate from the eligible pool. An item is surfaced
+// only if its total coolness clears PARK_THRESHOLD.
+
+const PARK_STALE_DAYS = 10;           // softer than Review's 14-day stale
+const PARK_LONG_HELD_DAYS = 5;        // softer than Review's 7-day long_blocked
+const PARK_FRESH_DAYS = 3;            // items newer than this are protected
+const PARK_CROWDED_READY_THRESHOLD = 5; // objective has this many ready siblings
+const PARK_THRESHOLD = 5;             // minimum coolness to surface
+
+const COOL_STALE = 5;
+const COOL_LONG_BLOCKED = 6;
+const COOL_LONG_WAITING = 5;
+const COOL_LOW_PRIORITY = 4;
+const COOL_UNBOUND = 3;
+const COOL_CROWDED_READY = 2;
+
+export interface ParkingSuggestion<T extends EngineTask = EngineTask> {
+  task: T;
+  coolness: number;
+  reasons: ScoreFactor[];
+  topReason: string;
+}
+
+function ageDays(createdAt: string): number {
+  return (Date.now() - new Date(createdAt).getTime()) / (24 * 60 * 60 * 1000);
+}
+
+export function scoreCoolness<T extends EngineTask>(
+  task: T,
+  ctx: EngineContext
+): ParkingSuggestion<T> | null {
+  // Hard gates
+  if (task.status === 'active' || task.status === 'done' || task.status === 'parked') return null;
+  if (task.priority === 'urgent') return null;
+  if (task.objectiveId && ctx.hotFrontObjectiveIds.has(task.objectiveId)) return null;
+
+  const age = ageDays(task.createdAt);
+  if (age < PARK_FRESH_DAYS) return null;
+
+  const reasons: ScoreFactor[] = [];
+
+  // Aged in the active field (ready / blocked / waiting)
+  if (age >= PARK_STALE_DAYS) {
+    reasons.push({
+      key: 'cool_stale',
+      label: `Aged ${Math.floor(age)} days`,
+      points: COOL_STALE,
+    });
+  }
+
+  // Long-held statuses — stuck in holding without movement
+  if (task.status === 'blocked' && age >= PARK_LONG_HELD_DAYS) {
+    reasons.push({ key: 'cool_long_blocked', label: 'Long-blocked', points: COOL_LONG_BLOCKED });
+  }
+  if (task.status === 'waiting' && age >= PARK_LONG_HELD_DAYS) {
+    reasons.push({ key: 'cool_long_waiting', label: 'Long-waiting', points: COOL_LONG_WAITING });
+  }
+
+  // Low priority sitting in the active field
+  if (task.priority === 'low') {
+    reasons.push({ key: 'cool_low_priority', label: 'Low priority', points: COOL_LOW_PRIORITY });
+  }
+
+  // Weakly anchored work
+  if (!task.objectiveId && !task.parentItemId) {
+    reasons.push({ key: 'cool_unbound', label: 'Unbound', points: COOL_UNBOUND });
+  }
+
+  // Crowded ready front — weaker items on a bloated objective can be parked
+  if (task.status === 'ready' && task.objectiveId) {
+    const counts = ctx.liveSiblingsByObjective.get(task.objectiveId);
+    if (counts && counts.ready >= PARK_CROWDED_READY_THRESHOLD) {
+      reasons.push({
+        key: 'cool_crowded',
+        label: 'Crowded ready front',
+        points: COOL_CROWDED_READY,
+      });
+    }
+  }
+
+  if (reasons.length === 0) return null;
+
+  reasons.sort((a, b) => b.points - a.points);
+  const coolness = reasons.reduce((sum, r) => sum + r.points, 0);
+  if (coolness < PARK_THRESHOLD) return null;
+
+  return {
+    task,
+    coolness,
+    reasons,
+    topReason: reasons[0].label,
+  };
+}
+
+export function rankParkingCandidates<T extends EngineTask>(
+  tasks: T[],
+  ctx?: EngineContext
+): ParkingSuggestion<T>[] {
+  const context = ctx ?? buildEngineContext(tasks);
+  const suggestions: ParkingSuggestion<T>[] = [];
+  for (const t of tasks) {
+    const s = scoreCoolness(t, context);
+    if (s) suggestions.push(s);
+  }
+  suggestions.sort((a, b) => {
+    if (b.coolness !== a.coolness) return b.coolness - a.coolness;
+    // Tiebreak: older items first (cooler by age)
+    return new Date(a.task.createdAt).getTime() - new Date(b.task.createdAt).getTime();
+  });
+  return suggestions;
+}

@@ -1,11 +1,18 @@
 import type { TaskWithDetails, ObjectiveWithCounts } from './types';
-import { recommendNextMove, type Recommendation } from './recommendation-engine';
+import {
+  recommendNextMove,
+  rankParkingCandidates,
+  buildEngineContext,
+  type Recommendation,
+  type ParkingSuggestion,
+} from './recommendation-engine';
 
 export type FrontHeat = 'hot' | 'ready';
 
 // Re-exported for backwards compatibility with existing imports.
 // Scoring lives in recommendation-engine.ts now.
 export type ScoredMove = Recommendation<TaskWithDetails>;
+export type ParkingMove = ParkingSuggestion<TaskWithDetails>;
 
 export interface ActiveFront {
   objective: ObjectiveWithCounts;
@@ -19,12 +26,14 @@ export interface NowPulse {
   activeFrontCount: number;
   blockedCount: number;
   waitingCount: number;
+  coolingCount: number;
 }
 
 export interface NowSnapshot {
   recommendedMove: ScoredMove | null;
   activeFronts: ActiveFront[];
   openDecisions: TaskWithDetails[];
+  parkingSuggestions: ParkingMove[];
   blockers: TaskWithDetails[];
   waiting: TaskWithDetails[];
   pulse: NowPulse;
@@ -77,6 +86,12 @@ export function buildNowSnapshot(
   // Recommendation comes from the engine — single source of truth
   const recommendedMove = recommendNextMove(tasks);
 
+  // Parking pressure: cooling candidates that should leave the active field.
+  // Reuses the engine's shared EngineContext shape (hot fronts, live siblings)
+  // to protect items that belong to momentum and surface the ones that don't.
+  const parkingCtx = buildEngineContext(tasks);
+  const parkingSuggestions = rankParkingCandidates(tasks, parkingCtx);
+
   // Open decisions: ready decisions, bound first
   const readyCandidates = normalizeReady(tasks);
   const openDecisions = readyCandidates
@@ -96,12 +111,14 @@ export function buildNowSnapshot(
     activeFrontCount: activeFronts.length,
     blockedCount: blockers.length,
     waitingCount: waiting.length,
+    coolingCount: parkingSuggestions.length,
   };
 
   return {
     recommendedMove,
     activeFronts,
     openDecisions,
+    parkingSuggestions,
     blockers,
     waiting,
     pulse,
