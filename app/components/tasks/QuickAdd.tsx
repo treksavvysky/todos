@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../AppProvider';
 import { parseTaskIntent } from '@/app/lib/intent-parser';
 import { parseIntentAI } from '@/app/lib/api-client';
@@ -16,11 +16,23 @@ interface QuickAddProps {
 
 export default function QuickAdd({ onClose }: QuickAddProps) {
   const { state, actions } = useApp();
+
+  // Binding pressure: default all brain-dumped tasks to an anchor (first
+  // mission, falling back to any objective). The user can override per-session
+  // from the picker below. Tasks that the AI parser has already anchored keep
+  // their own objectiveId — the default only fills the gap.
+  const defaultObjectiveId = useMemo(() => {
+    const firstMission = state.objectives.find((o) => o.objectiveType === 'mission');
+    if (firstMission) return firstMission.id;
+    return state.objectives[0]?.id ?? '';
+  }, [state.objectives]);
+
   const [input, setInput] = useState('');
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiTasks, setAiTasks] = useState<TaskCreateInput[]>([]);
   const [heuristicResult, setHeuristicResult] = useState<ReturnType<typeof parseTaskIntent> | null>(null);
-  
+  const [bindObjectiveId, setBindObjectiveId] = useState(defaultObjectiveId);
+
   const debouncedInput = useDebounce(input, 800);
 
   // Heuristic parsing (Instant)
@@ -64,8 +76,15 @@ export default function QuickAdd({ onClose }: QuickAddProps) {
 
     if (tasksToCreate.length === 0) return;
 
+    // Apply the session binding to any task the parser didn't already anchor.
+    // Parser-provided objectiveIds (unlikely today, but possible) win.
+    const anchored = tasksToCreate.map((t) => ({
+      ...t,
+      objectiveId: t.objectiveId ?? (bindObjectiveId || undefined),
+    }));
+
     try {
-      await Promise.all(tasksToCreate.map(t => actions.createTask(t)));
+      await Promise.all(anchored.map(t => actions.createTask(t)));
       onClose();
     } catch (err) {
       console.error('Quick add failed', err);
@@ -102,6 +121,42 @@ export default function QuickAdd({ onClose }: QuickAddProps) {
             Type naturally. AI will extract multiple tasks, dates, priorities, and labels.
           </p>
         </div>
+
+        {/* Binding pressure: anchor all extracted tasks to a single objective */}
+        {state.objectives.length > 0 && (
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-wider px-1" style={{ color: 'var(--color-text-muted)' }}>
+              Bind to
+            </label>
+            <select
+              value={bindObjectiveId}
+              onChange={(e) => setBindObjectiveId(e.target.value)}
+              className="w-full px-3 py-2 text-sm border rounded-md outline-none"
+              style={{
+                background: 'var(--color-bg)',
+                color: 'var(--color-text)',
+                borderColor: bindObjectiveId === ''
+                  ? 'var(--color-warning, #d97706)'
+                  : 'var(--color-border)',
+              }}
+            >
+              <option value="">⚠ Unbound (provisional)</option>
+              {state.objectives.map((obj) => (
+                <option key={obj.id} value={obj.id}>
+                  {obj.objectiveType === 'mission' ? '🎯' : '🅿️'} {obj.title}
+                </option>
+              ))}
+            </select>
+            {!bindObjectiveId && (
+              <p
+                className="text-[10px] leading-tight px-1"
+                style={{ color: 'var(--color-warning, #d97706)' }}
+              >
+                ⚠ Unbound items drift. Pick an anchor or they&apos;ll show up in Review Mode as orphans.
+              </p>
+            )}
+          </div>
+        )}
 
         {tasksPreview.length > 0 && (
           <div className="flex flex-col gap-2">

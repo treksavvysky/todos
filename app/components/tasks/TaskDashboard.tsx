@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useApp } from '../AppProvider';
 import Header from '../layout/Header';
 import Sidebar from '../layout/Sidebar';
@@ -14,6 +14,7 @@ import TaskForm from './TaskForm';
 import QuickAdd from './QuickAdd';
 import { ToastContainer } from '../ui/Toast';
 import Drawer from '../ui/Drawer';
+import { buildReviewSnapshot } from '@/app/lib/review-mode';
 
 export default function TaskDashboard() {
   const { state, dispatch } = useApp();
@@ -21,6 +22,14 @@ export default function TaskDashboard() {
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'now' | 'list' | 'kanban' | 'objectives' | 'review'>('now');
+
+  // Review pressure: compute flagged count so it can be surfaced on the REVIEW
+  // toggle button. This makes backlog decay visible from anywhere in the app —
+  // the user should not have to remember to remember.
+  const reviewFlaggedCount = useMemo(
+    () => buildReviewSnapshot(state.tasks).totalFlagged,
+    [state.tasks]
+  );
 
   const dismissToast = useCallback((id: string) => {
     dispatch({ type: 'REMOVE_TOAST', payload: id });
@@ -142,24 +151,55 @@ export default function TaskDashboard() {
                 </button>
                 <button
                   onClick={() => setViewMode('review')}
-                  className="px-2 py-1 text-[10px] font-bold rounded transition-all"
+                  className="px-2 py-1 text-[10px] font-bold rounded transition-all flex items-center gap-1.5"
                   style={{
                     backgroundColor: viewMode === 'review' ? 'var(--color-primary)' : 'transparent',
                     color: viewMode === 'review' ? '#ffffff' : 'var(--color-text-muted)',
                   }}
+                  title={
+                    reviewFlaggedCount > 0
+                      ? `${reviewFlaggedCount} item${reviewFlaggedCount !== 1 ? 's' : ''} flagged for review`
+                      : 'Review Mode'
+                  }
                 >
                   REVIEW
+                  {reviewFlaggedCount > 0 && (
+                    <span
+                      className="text-[9px] font-bold px-1.5 rounded-full leading-[14px] min-w-[16px] text-center"
+                      style={{
+                        backgroundColor: viewMode === 'review' ? 'rgba(255,255,255,0.25)' : 'var(--color-warning, #d97706)',
+                        color: '#ffffff',
+                      }}
+                    >
+                      {reviewFlaggedCount > 99 ? '99+' : reviewFlaggedCount}
+                    </span>
+                  )}
                 </button>
               </div>
             </div>
 
-            <button
-              onClick={() => setShowQuickAdd(true)}
-              className="px-3 py-1.5 text-sm rounded-md text-white"
-              style={{ backgroundColor: 'var(--color-primary)' }}
-            >
-              + Quick Add
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowTaskForm(true)}
+                className="px-3 py-1.5 text-sm rounded-md border hover:opacity-80 transition-opacity"
+                style={{
+                  borderColor: 'var(--color-border)',
+                  color: 'var(--color-text-secondary)',
+                  background: 'transparent',
+                }}
+                title="Create a structured task with item type, objective binding, and labels"
+              >
+                + New Task
+              </button>
+              <button
+                onClick={() => setShowQuickAdd(true)}
+                className="px-3 py-1.5 text-sm rounded-md text-white"
+                style={{ backgroundColor: 'var(--color-primary)' }}
+                title="Brain-dump: type naturally, AI extracts tasks (n)"
+              >
+                + Quick Add
+              </button>
+            </div>
           </div>
 
           {viewMode === 'now' && <NowView />}

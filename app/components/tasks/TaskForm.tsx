@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useApp } from '../AppProvider';
 import Modal from '../ui/Modal';
 import { ITEM_TYPE_OPTIONS } from './ItemTypeBadge';
@@ -12,11 +12,22 @@ interface TaskFormProps {
 
 export default function TaskForm({ onClose }: TaskFormProps) {
   const { state, actions } = useApp();
+
+  // Binding pressure: default to the first mission so new work is anchored by
+  // default. Missions are preferred over parking lots because missions pull;
+  // parking lots hold. If no missions exist, fall back to the first objective
+  // of any kind, then to empty (which will show the orphan warning).
+  const defaultObjectiveId = useMemo(() => {
+    const firstMission = state.objectives.find((o) => o.objectiveType === 'mission');
+    if (firstMission) return firstMission.id;
+    return state.objectives[0]?.id ?? '';
+  }, [state.objectives]);
+
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<TaskPriority>('medium');
   const [itemType, setItemType] = useState<ItemType>('action');
-  const [objectiveId, setObjectiveId] = useState('');
+  const [objectiveId, setObjectiveId] = useState(defaultObjectiveId);
   const [parentItemId, setParentItemId] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [selectedLabelIds, setSelectedLabelIds] = useState<string[]>([]);
@@ -154,9 +165,14 @@ export default function TaskForm({ onClose }: TaskFormProps) {
               value={objectiveId}
               onChange={(e) => setObjectiveId(e.target.value)}
               className="w-full px-3 py-2 text-sm border rounded-md outline-none"
-              style={inputStyle}
+              style={{
+                ...inputStyle,
+                borderColor: objectiveId === '' && !parentItemId
+                  ? 'var(--color-warning, #d97706)'
+                  : inputStyle.borderColor,
+              }}
             >
-              <option value="">None</option>
+              <option value="">⚠ Unbound (provisional)</option>
               {state.objectives.map((obj) => (
                 <option key={obj.id} value={obj.id}>
                   {obj.objectiveType === 'mission' ? '🎯' : '🅿️'} {obj.title}
@@ -184,6 +200,25 @@ export default function TaskForm({ onClose }: TaskFormProps) {
             </select>
           </div>
         </div>
+
+        {/* Weak-signal warning for unbound creation */}
+        {!objectiveId && !parentItemId && (
+          <div
+            className="text-[11px] px-3 py-2 rounded-md border flex items-start gap-2"
+            style={{
+              borderColor: 'var(--color-warning, #d97706)',
+              color: 'var(--color-warning, #d97706)',
+              background: 'rgba(217, 119, 6, 0.06)',
+            }}
+          >
+            <span className="leading-tight">⚠</span>
+            <span className="leading-tight">
+              This item will be created <strong>unbound</strong>. Unbound work is provisional — it
+              drifts more easily and gets flagged in Review Mode. Consider anchoring it to an
+              objective or parent item.
+            </span>
+          </div>
+        )}
 
         {/* Label selector */}
         <div>
