@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "todos": {
+      "type": "stdio",
+      "command": "docker",
+      "args": [
+        "exec",
+        "-i",
+        "todo-app",
+        "npx",
+        "tsx",
+        "/app/mcp/server.ts"
+      ],
+      "env": {}
+    }
+  }
+}
