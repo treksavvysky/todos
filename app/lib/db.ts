@@ -43,7 +43,8 @@ function runMigrations(db: Database.Database): void {
       parent_item_id TEXT REFERENCES tasks(id) ON DELETE SET NULL,
       due_date TEXT,
       created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
+      updated_at TEXT NOT NULL,
+      completed_at TEXT
     );
 
     CREATE TABLE IF NOT EXISTS labels (
@@ -142,6 +143,17 @@ function runMigrations(db: Database.Database): void {
 
   db.exec("CREATE INDEX IF NOT EXISTS idx_tasks_objective ON tasks(objective_id)");
   db.exec("CREATE INDEX IF NOT EXISTS idx_tasks_parent_item ON tasks(parent_item_id)");
+
+  // Migration: add completed_at column for durable completion timestamps.
+  // Nullable — only set when status transitions to 'done'. Does not
+  // backfill existing done items (their historical completion time is
+  // unrecoverable from the current schema; updated_at is a stale proxy).
+  const taskCols2 = db.prepare("PRAGMA table_info(tasks)").all() as { name: string }[];
+  if (!taskCols2.some(c => c.name === 'completed_at')) {
+    db.exec("ALTER TABLE tasks ADD COLUMN completed_at TEXT");
+  }
+
+  db.exec("CREATE INDEX IF NOT EXISTS idx_tasks_completed_at ON tasks(completed_at)");
 
   seedDefaults(db);
 }

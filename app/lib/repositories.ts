@@ -32,6 +32,7 @@ function rowToTask(row: Record<string, unknown>): Task {
     dueDate: (row.due_date as string) || null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
+    completedAt: (row.completed_at as string) || null,
   };
 }
 
@@ -168,9 +169,13 @@ export const TaskRepository = {
     const id = generateId();
     const now = nowISO();
 
+    // If a task is created directly in 'done' status (rare but legal),
+    // stamp completed_at so the historical record is consistent.
+    const completedAt = input.status === 'done' ? now : null;
+
     db.prepare(`
-      INSERT INTO tasks (id, title, description, status, priority, item_type, objective_id, parent_item_id, due_date, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO tasks (id, title, description, status, priority, item_type, objective_id, parent_item_id, due_date, created_at, updated_at, completed_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       input.title,
@@ -183,6 +188,7 @@ export const TaskRepository = {
       input.dueDate || null,
       now,
       now,
+      completedAt,
     );
 
     if (input.labelIds && input.labelIds.length > 0) {
@@ -194,7 +200,7 @@ export const TaskRepository = {
 
   update(id: string, input: TaskUpdateInput): TaskWithDetails | null {
     const db = getDb();
-    const existing = db.prepare('SELECT id FROM tasks WHERE id = ?').get(id);
+    const existing = db.prepare('SELECT status FROM tasks WHERE id = ?').get(id) as { status: Task['status'] } | undefined;
     if (!existing) return null;
 
     const sets: string[] = [];
@@ -208,6 +214,27 @@ export const TaskRepository = {
     if (input.objectiveId !== undefined) { sets.push('objective_id = ?'); params.push(input.objectiveId); }
     if (input.parentItemId !== undefined) { sets.push('parent_item_id = ?'); params.push(input.parentItemId); }
     if (input.dueDate !== undefined) { sets.push('due_date = ?'); params.push(input.dueDate); }
+
+    // completed_at management:
+    // 1. Explicit override wins — if input.completedAt is provided (including
+    //    null to clear), use it verbatim. This supports backdating and manual
+    //    correction.
+    // 2. Otherwise auto-manage on status transitions:
+    //    - becoming 'done' (from a non-done status): stamp with now()
+    //    - leaving 'done' (to any other status): clear to null
+    //    - status unchanged or not being changed: leave completed_at alone
+    if (input.completedAt !== undefined) {
+      sets.push('completed_at = ?');
+      params.push(input.completedAt);
+    } else if (input.status !== undefined && input.status !== existing.status) {
+      if (input.status === 'done') {
+        sets.push('completed_at = ?');
+        params.push(nowISO());
+      } else if (existing.status === 'done') {
+        sets.push('completed_at = ?');
+        params.push(null);
+      }
+    }
 
     if (sets.length > 0) {
       sets.push('updated_at = ?');
@@ -404,5 +431,11 @@ export const CommentRepository = {
     `).run(id, taskId, content, now);
 
     return { id, taskId, content, createdAt: now };
+  },
+
+  remove(id: string): boolean {
+    const db = getDb();
+    const result = db.prepare('DELETE FROM comments WHERE id = ?').run(id);
+    return result.changes > 0;
   },
 };

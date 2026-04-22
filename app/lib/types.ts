@@ -29,6 +29,10 @@ export interface Task {
   dueDate: string | null;
   createdAt: string;
   updatedAt: string;
+  // Set automatically when status transitions to 'done'; cleared when status
+  // transitions away from 'done'. Can be overridden explicitly via an update
+  // (useful for backdating retroactive completions).
+  completedAt: string | null;
 }
 
 export interface Label {
@@ -69,6 +73,9 @@ export interface TaskUpdateInput {
   objectiveId?: string | null;
   parentItemId?: string | null;
   dueDate?: string | null;
+  // Explicit override for retroactive/backdated completion. If omitted, the
+  // repository auto-manages completedAt based on status transitions.
+  completedAt?: string | null;
 }
 
 export interface ObjectiveCreateInput {

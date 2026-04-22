@@ -4,7 +4,7 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { TaskRepository, LabelRepository, ObjectiveRepository } from "../app/lib/repositories.js";
+import { TaskRepository, LabelRepository, ObjectiveRepository, CommentRepository } from "../app/lib/repositories.js";
 import { recommendNextMove } from "../app/lib/recommendation-engine.js";
 import type { TaskFilters, TaskUpdateInput, TaskCreateInput, ObjectiveCreateInput, ObjectiveUpdateInput } from "../app/lib/types.js";
 
@@ -75,7 +75,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "update_task",
-        description: "Update an existing task's fields.",
+        description: "Update an existing task's fields. If status transitions to/from 'done', completedAt is auto-managed unless an explicit completedAt is provided (backdating supported).",
         inputSchema: {
           type: "object",
           properties: {
@@ -88,6 +88,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             objectiveId: { type: "string", description: "ID of the parent objective. Pass null to unbind." },
             parentItemId: { type: "string", description: "ID of the parent item. Pass null to unbind." },
             dueDate: { type: "string" },
+            completedAt: { type: "string", description: "ISO timestamp of when the task was actually completed. Use for backdating. If omitted, the repository auto-manages based on status transitions." },
           },
           required: ["id"],
         },
@@ -156,6 +157,40 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           properties: {
             kind: { type: "string", enum: ["scope", "project"] },
           },
+        },
+      },
+      {
+        name: "add_comment",
+        description: "Append a comment to a task. Comments are append-only notes attached to a task — useful for recording outcomes, residual notes, or context that doesn't fit in the description.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            taskId: { type: "string", description: "ID of the task to comment on." },
+            content: { type: "string", description: "The comment body (markdown supported in the UI)." },
+          },
+          required: ["taskId", "content"],
+        },
+      },
+      {
+        name: "list_comments",
+        description: "Fetch all comments for a given task, oldest first. Note: get_task already returns the embedded comments array; use this when you only need comments and want to avoid the full task payload.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            taskId: { type: "string" },
+          },
+          required: ["taskId"],
+        },
+      },
+      {
+        name: "delete_comment",
+        description: "Permanently delete a comment by id.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            id: { type: "string" },
+          },
+          required: ["id"],
         },
       },
     ],
@@ -264,6 +299,36 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const { kind } = args as { kind?: string };
         const labels = LabelRepository.list(kind);
         return { content: [{ type: "text", text: JSON.stringify(labels, null, 2) }] };
+      }
+
+      case "add_comment": {
+        const { taskId, content } = args as { taskId: string; content: string };
+        // Verify the task exists before creating a comment attached to it.
+        // Prevents orphan comments from client typos.
+        const task = TaskRepository.getById(taskId);
+        if (!task) {
+          return {
+            content: [{ type: "text", text: `Task not found: ${taskId}` }],
+            isError: true,
+          };
+        }
+        const comment = CommentRepository.create(taskId, content);
+        return { content: [{ type: "text", text: JSON.stringify(comment, null, 2) }] };
+      }
+
+      case "list_comments": {
+        const { taskId } = args as { taskId: string };
+        const comments = CommentRepository.listForTask(taskId);
+        return { content: [{ type: "text", text: JSON.stringify(comments, null, 2) }] };
+      }
+
+      case "delete_comment": {
+        const { id } = args as { id: string };
+        const success = CommentRepository.remove(id);
+        return {
+          content: [{ type: "text", text: success ? `Comment ${id} deleted` : "Comment not found" }],
+          isError: !success,
+        };
       }
 
       default:
