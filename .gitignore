@@ -60,3 +60,4 @@ data/*.db-wal
 
 # Gemini CLI
 .gemini/
+.claude/
