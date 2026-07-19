@@ -47,6 +47,10 @@ AI endpoints require `GEMINI_API_KEY` env var. Fallback heuristic parser in `app
 
 Stdio-based Model Context Protocol server exposing task CRUD tools for AI agents (Claude Desktop, Gemini CLI). Shares the same database and repository layer.
 
+### Agent Gate (`app/api/agent/*`)
+
+HTTP agent boundary for external agents (Custom GPTs, …) powered by `@plugins/agent-gate` (+ `-next` adapter, `file:` deps into `~/plugins`). The spec in `app/lib/agent-openapi.ts` describes only `/api/agent/*`; the gate singleton in `app/lib/gate.ts` filters it per agent and enforces the same permissions at runtime via `requireAgent` in each route. Admin UI at `/api/agent-gate/admin`. The UI's own routes (`/api/tasks`, …) stay outside this boundary. Env: `AGENT_GATE_ADMIN_TOKEN` (required), `AGENT_GATE_PUBLIC_URL`/`_NAME` (spec server), `AGENT_GATE_DATA` (key store, default `data/agent-gate.data.json`).
+
 ## Key Conventions
 
 - `next.config.ts` marks `better-sqlite3` as a server external package
