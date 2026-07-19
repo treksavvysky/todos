@@ -1,4 +1,4 @@
-import type { TaskStatus, TaskPriority, ItemType } from './types';
+import type { TaskStatus, TaskPriority, ItemType, ObjectiveType, CampaignStatus } from './types';
 
 // ---- Minimal operational shape ----
 
@@ -16,6 +16,17 @@ export interface EngineTask {
   objectiveId: string | null;
   parentItemId: string | null;
   createdAt: string;
+}
+
+/**
+ * The minimal objective shape the engine consumes for campaign deadline
+ * pressure. Objective / ObjectiveWithCounts satisfy this structurally.
+ */
+export interface EngineObjective {
+  id: string;
+  objectiveType: ObjectiveType;
+  targetDate: string | null;
+  campaignStatus: CampaignStatus | null;
 }
 
 export interface ScoreFactor {
@@ -44,6 +55,9 @@ export interface EngineContext {
   liveSiblingsByObjective: Map<string, LiveCounts>;
   liveSiblingsByParent: Map<string, LiveCounts>;
   stuckChildrenByParent: Map<string, number>;
+  // objectiveId → target date for *active* campaigns only. Missions and
+  // parking lots never appear here — deadline pressure is campaign-shaped.
+  campaignTargetByObjective: Map<string, string>;
 }
 
 // ---- Scoring constants ----
@@ -61,6 +75,18 @@ const BOUND_BOOST = 10;
 const DECISION_NUDGE = 8;
 const STALENESS_BOOST = 5;
 const STALENESS_DAYS = 7;
+
+// Campaign deadline proximity — graduated boost as the target date nears.
+// Missions never receive this: they have no "by when".
+const CAMPAIGN_DEADLINE_TIERS: { maxDays: number; points: number }[] = [
+  { maxDays: 3, points: 20 },
+  { maxDays: 7, points: 15 },
+  { maxDays: 14, points: 10 },
+  { maxDays: 30, points: 5 },
+];
+const CAMPAIGN_OVERDUE_BOOST = 25;
+// Items on a campaign this close to target are never suggested for parking.
+const CAMPAIGN_PARK_SHIELD_DAYS = 14;
 
 // Sibling weights for the decision unblock heuristic
 const SIBLING_BLOCKED_WEIGHT = 3;
@@ -85,6 +111,32 @@ function bumpCount(counts: LiveCounts, status: TaskStatus): void {
   else if (status === 'waiting') counts.waiting += 1;
   else if (status === 'active') counts.active += 1;
   // 'done' and 'parked' are intentionally excluded — no leverage value
+}
+
+function daysUntil(dateISO: string): number {
+  const target = new Date(dateISO).getTime();
+  return Math.ceil((target - Date.now()) / (24 * 60 * 60 * 1000));
+}
+
+function campaignDeadlineFactor(task: EngineTask, ctx: EngineContext): ScoreFactor | null {
+  if (!task.objectiveId) return null;
+  const targetDate = ctx.campaignTargetByObjective.get(task.objectiveId);
+  if (!targetDate) return null;
+
+  const days = daysUntil(targetDate);
+  if (days < 0) {
+    return { key: 'campaign_overdue', label: 'Campaign past target', points: CAMPAIGN_OVERDUE_BOOST };
+  }
+  for (const tier of CAMPAIGN_DEADLINE_TIERS) {
+    if (days <= tier.maxDays) {
+      return {
+        key: 'campaign_deadline',
+        label: `Campaign target in ${days} day${days === 1 ? '' : 's'}`,
+        points: tier.points,
+      };
+    }
+  }
+  return null;
 }
 
 function isStale(createdAt: string): boolean {
@@ -118,7 +170,19 @@ export function normalizeReady<T extends EngineTask>(tasks: T[]): T[] {
   return tasks.filter((t) => t.status === 'ready');
 }
 
-export function buildEngineContext<T extends EngineTask>(tasks: T[]): EngineContext {
+export function buildEngineContext<T extends EngineTask>(
+  tasks: T[],
+  objectives?: EngineObjective[]
+): EngineContext {
+  const campaignTargetByObjective = new Map<string, string>();
+  if (objectives) {
+    for (const o of objectives) {
+      if (o.objectiveType === 'campaign' && o.campaignStatus === 'active' && o.targetDate) {
+        campaignTargetByObjective.set(o.id, o.targetDate);
+      }
+    }
+  }
+
   const hotFrontObjectiveIds = new Set<string>();
   const readyFrontObjectiveIds = new Set<string>();
   const liveSiblingsByObjective = new Map<string, LiveCounts>();
@@ -167,6 +231,7 @@ export function buildEngineContext<T extends EngineTask>(tasks: T[]): EngineCont
     liveSiblingsByObjective,
     liveSiblingsByParent,
     stuckChildrenByParent,
+    campaignTargetByObjective,
   };
 }
 
@@ -188,6 +253,10 @@ export function scoreTask<T extends EngineTask>(task: T, ctx: EngineContext): Re
   if (task.objectiveId || task.parentItemId) {
     factors.push({ key: 'bound', label: 'Bound to objective', points: BOUND_BOOST });
   }
+
+  // Campaign deadline proximity
+  const deadlineFactor = campaignDeadlineFactor(task, ctx);
+  if (deadlineFactor) factors.push(deadlineFactor);
 
   // Decision nudge + sibling unblock
   if (task.itemType === 'decision') {
@@ -254,6 +323,8 @@ function buildNarrative<T extends EngineTask>(task: T, factors: ScoreFactor[]): 
       case 'decision_nudge':  return 'a pending decision';
       case 'unblock_decision':return f.label.toLowerCase();
       case 'unblock_parent':  return f.label.toLowerCase();
+      case 'campaign_deadline': return f.label.toLowerCase().replace('campaign target', 'on a campaign closing');
+      case 'campaign_overdue':  return 'on a campaign past its target';
       case 'staleness':       return 'aging on the deck';
       default:                return f.label.toLowerCase();
     }
@@ -271,9 +342,10 @@ function buildNarrative<T extends EngineTask>(task: T, factors: ScoreFactor[]): 
 
 export function rankRecommendations<T extends EngineTask>(
   tasks: T[],
-  ctx?: EngineContext
+  ctx?: EngineContext,
+  objectives?: EngineObjective[]
 ): Recommendation<T>[] {
-  const context = ctx ?? buildEngineContext(tasks);
+  const context = ctx ?? buildEngineContext(tasks, objectives);
   const candidates = normalizeReady(tasks);
   const scored = candidates.map((t) => scoreTask(t, context));
   scored.sort((a, b) => {
@@ -283,8 +355,11 @@ export function rankRecommendations<T extends EngineTask>(
   return scored;
 }
 
-export function recommendNextMove<T extends EngineTask>(tasks: T[]): Recommendation<T> | null {
-  const ranked = rankRecommendations(tasks);
+export function recommendNextMove<T extends EngineTask>(
+  tasks: T[],
+  objectives?: EngineObjective[]
+): Recommendation<T> | null {
+  const ranked = rankRecommendations(tasks, undefined, objectives);
   return ranked[0] ?? null;
 }
 
@@ -344,6 +419,12 @@ export function scoreCoolness<T extends EngineTask>(
   if (task.status === 'active' || task.status === 'done' || task.status === 'parked') return null;
   if (task.priority === 'urgent') return null;
   if (task.objectiveId && ctx.hotFrontObjectiveIds.has(task.objectiveId)) return null;
+  // Never park items on a campaign nearing (or past) its target — deadline
+  // pressure means everything bound to it stays in the field until it closes.
+  if (task.objectiveId) {
+    const targetDate = ctx.campaignTargetByObjective.get(task.objectiveId);
+    if (targetDate && daysUntil(targetDate) <= CAMPAIGN_PARK_SHIELD_DAYS) return null;
+  }
 
   const age = ageDays(task.createdAt);
   if (age < PARK_FRESH_DAYS) return null;

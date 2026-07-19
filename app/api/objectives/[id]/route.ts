@@ -22,9 +22,15 @@ export async function PATCH(
   const { id } = await params;
   const body = await request.json();
 
+  if (body.campaignStatus !== undefined && !['active', 'parked', 'complete', 'abandoned'].includes(body.campaignStatus)) {
+    return NextResponse.json({ error: 'campaignStatus must be active, parked, complete, or abandoned' }, { status: 400 });
+  }
+
   const objective = ObjectiveRepository.update(id, {
     title: body.title,
     description: body.description,
+    targetDate: body.targetDate,
+    campaignStatus: body.campaignStatus,
   });
 
   if (!objective) {

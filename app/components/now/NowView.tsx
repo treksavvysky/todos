@@ -1,5 +1,6 @@
 'use client';
 
+import { objectiveIcon } from '@/app/lib/objective-ui';
 import { useMemo, useState } from 'react';
 import { useApp } from '../AppProvider';
 import TaskCard from '../tasks/TaskCard';
@@ -183,7 +184,7 @@ function RecommendedMoveCard({
         <TaskPriorityBadge priority={task.priority} />
         {objective && (
           <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ backgroundColor: 'var(--color-bg-secondary)', color: 'var(--color-text-muted)' }}>
-            {objective.objectiveType === 'mission' ? '🎯' : '🅿️'} {objective.title}
+            {objectiveIcon(objective.objectiveType)} {objective.title}
           </span>
         )}
       </div>
@@ -339,7 +340,7 @@ function DecisionRow({
       <span className="flex-1 text-sm" style={{ color: 'var(--color-text)' }}>{task.title}</span>
       {objective && (
         <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ backgroundColor: 'var(--color-bg-secondary)', color: 'var(--color-text-muted)' }}>
-          {objective.objectiveType === 'mission' ? '🎯' : '🅿️'} {objective.title}
+          {objectiveIcon(objective.objectiveType)} {objective.title}
         </span>
       )}
       {isUnbound && (
@@ -471,7 +472,7 @@ function ParkingRow({
             className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0"
             style={{ backgroundColor: 'var(--color-surface)', color: 'var(--color-text-muted)' }}
           >
-            {objective.objectiveType === 'mission' ? '🎯' : '🅿️'} {objective.title}
+            {objectiveIcon(objective.objectiveType)} {objective.title}
           </span>
         )}
         <span

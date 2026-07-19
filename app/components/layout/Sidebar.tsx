@@ -8,6 +8,7 @@ import GardenerModal from '../ui/GardenerModal';
 import ContextMenu from '../ui/ContextMenu';
 import ConfirmDialog from '../ui/ConfirmDialog';
 import type { LabelKind, LabelWithCount, ObjectiveType } from '@/app/lib/types';
+import { campaignCountdown } from '@/app/lib/objective-ui';
 
 interface ContextMenuState {
   label: LabelWithCount;
@@ -30,10 +31,12 @@ export default function Sidebar({ onSelect }: SidebarProps) {
   const [showObjectiveForm, setShowObjectiveForm] = useState(false);
   const [objectiveFormType, setObjectiveFormType] = useState<ObjectiveType>('mission');
   const [objectiveTitle, setObjectiveTitle] = useState('');
+  const [objectiveTargetDate, setObjectiveTargetDate] = useState('');
 
   const scopes = state.labels.filter((l) => l.kind === 'scope');
   const projects = state.labels.filter((l) => l.kind === 'project');
   const missions = state.objectives.filter((o) => o.objectiveType === 'mission');
+  const campaigns = state.objectives.filter((o) => o.objectiveType === 'campaign');
   const parkingLots = state.objectives.filter((o) => o.objectiveType === 'parking_lot');
 
   const activeScope = state.filters.scopeId;
@@ -69,8 +72,13 @@ export default function Sidebar({ onSelect }: SidebarProps) {
 
   const handleCreateObjective = async () => {
     if (!objectiveTitle.trim()) return;
-    await actions.createObjective({ title: objectiveTitle.trim(), objectiveType: objectiveFormType });
+    await actions.createObjective({
+      title: objectiveTitle.trim(),
+      objectiveType: objectiveFormType,
+      targetDate: objectiveFormType === 'campaign' && objectiveTargetDate ? objectiveTargetDate : null,
+    });
     setObjectiveTitle('');
+    setObjectiveTargetDate('');
     setShowObjectiveForm(false);
   };
 
@@ -194,6 +202,31 @@ export default function Sidebar({ onSelect }: SidebarProps) {
                   {obj.title}
                 </span>
                 <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{obj.itemCount}</span>
+              </button>
+            </li>
+          ))}
+          {campaigns.map((obj) => (
+            <li key={obj.id}>
+              <button
+                onClick={() => handleObjectiveClick(obj.id)}
+                className="w-full flex items-center justify-between px-2 py-1.5 rounded-md text-sm transition-colors"
+                style={{
+                  background: activeObjective === obj.id ? 'var(--color-bg-secondary)' : 'transparent',
+                  color: activeObjective === obj.id ? 'var(--color-text)' : 'var(--color-text-secondary)',
+                  opacity: obj.campaignStatus === 'active' ? 1 : 0.5,
+                }}
+              >
+                <span className="flex items-center gap-2 min-w-0">
+                  <span>🚩</span>
+                  <span className="truncate">{obj.title}</span>
+                </span>
+                <span className="text-xs shrink-0" style={{ color: 'var(--color-text-muted)' }}>
+                  {obj.campaignStatus === 'active' && obj.targetDate
+                    ? campaignCountdown(obj.targetDate)
+                    : obj.campaignStatus !== 'active' && obj.campaignStatus
+                      ? obj.campaignStatus
+                      : obj.itemCount}
+                </span>
               </button>
             </li>
           ))}
@@ -385,6 +418,18 @@ export default function Sidebar({ onSelect }: SidebarProps) {
               </button>
               <button
                 type="button"
+                onClick={() => setObjectiveFormType('campaign')}
+                className="flex-1 px-3 py-1.5 text-sm rounded-md border transition-colors"
+                style={{
+                  borderColor: objectiveFormType === 'campaign' ? 'var(--color-primary)' : 'var(--color-border)',
+                  backgroundColor: objectiveFormType === 'campaign' ? 'var(--color-primary)' : 'transparent',
+                  color: objectiveFormType === 'campaign' ? '#ffffff' : 'var(--color-text-secondary)',
+                }}
+              >
+                🚩 Campaign
+              </button>
+              <button
+                type="button"
                 onClick={() => setObjectiveFormType('parking_lot')}
                 className="flex-1 px-3 py-1.5 text-sm rounded-md border transition-colors"
                 style={{
@@ -396,6 +441,18 @@ export default function Sidebar({ onSelect }: SidebarProps) {
                 🅿️ Parking Lot
               </button>
             </div>
+            {objectiveFormType === 'campaign' && (
+              <label className="flex flex-col gap-1 text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                Target date
+                <input
+                  type="date"
+                  value={objectiveTargetDate}
+                  onChange={(e) => setObjectiveTargetDate(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border rounded-md outline-none focus:ring-2 focus:ring-indigo-400"
+                  style={{ background: 'var(--color-bg)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
+                />
+              </label>
+            )}
             <button
               onClick={handleCreateObjective}
               disabled={!objectiveTitle.trim()}

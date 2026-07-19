@@ -1,5 +1,6 @@
 'use client';
 
+import { objectiveIcon, campaignCountdown } from '@/app/lib/objective-ui';
 import { useState } from 'react';
 import { useApp } from '../AppProvider';
 import TaskCard from '../tasks/TaskCard';
@@ -34,12 +35,13 @@ export default function ObjectivesView() {
   }
 
   const missions = state.objectives.filter(o => o.objectiveType === 'mission');
+  const campaigns = state.objectives.filter(o => o.objectiveType === 'campaign');
   const parkingLots = state.objectives.filter(o => o.objectiveType === 'parking_lot');
 
   const renderObjectiveCard = (obj: ObjectiveWithCounts) => {
     const tasks = tasksByObjective.get(obj.id) || [];
     const isExpanded = expandedIds.has(obj.id);
-    const icon = obj.objectiveType === 'mission' ? '🎯' : '🅿️';
+    const icon = objectiveIcon(obj.objectiveType);
 
     return (
       <div key={obj.id} className="border rounded-lg" style={{ borderColor: 'var(--color-border)' }}>
@@ -58,6 +60,16 @@ export default function ObjectivesView() {
               <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>{obj.description}</p>
             )}
           </div>
+          {obj.objectiveType === 'campaign' && obj.campaignStatus && obj.campaignStatus !== 'active' && (
+            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-200 text-slate-600">
+              {obj.campaignStatus}
+            </span>
+          )}
+          {obj.objectiveType === 'campaign' && obj.campaignStatus === 'active' && obj.targetDate && (
+            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-rose-100 text-rose-700">
+              {campaignCountdown(obj.targetDate)}
+            </span>
+          )}
           <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-200 text-slate-600">
             {tasks.length}
           </span>
@@ -115,6 +127,18 @@ export default function ObjectivesView() {
           </h2>
           <div className="flex flex-col gap-2">
             {missions.map(renderObjectiveCard)}
+          </div>
+        </div>
+      )}
+
+      {/* Campaigns */}
+      {campaigns.length > 0 && (
+        <div>
+          <h2 className="text-xs font-bold uppercase tracking-wider mb-2 px-1" style={{ color: 'var(--color-text-muted)' }}>
+            Campaigns
+          </h2>
+          <div className="flex flex-col gap-2">
+            {campaigns.map(renderObjectiveCard)}
           </div>
         </div>
       )}

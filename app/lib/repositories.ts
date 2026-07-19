@@ -42,6 +42,8 @@ function rowToObjective(row: Record<string, unknown>): Objective {
     title: row.title as string,
     objectiveType: row.objective_type as Objective['objectiveType'],
     description: row.description as string,
+    targetDate: (row.target_date as string) || null,
+    campaignStatus: (row.campaign_status as Objective['campaignStatus']) || null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };
@@ -375,17 +377,22 @@ export const ObjectiveRepository = {
     const id = generateId();
     const now = nowISO();
 
+    // Campaign-only fields: campaigns start 'active'; other types keep both null.
+    const isCampaign = input.objectiveType === 'campaign';
+    const targetDate = isCampaign ? input.targetDate || null : null;
+    const campaignStatus = isCampaign ? 'active' : null;
+
     db.prepare(`
-      INSERT INTO objectives (id, title, objective_type, description, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(id, input.title, input.objectiveType, input.description || '', now, now);
+      INSERT INTO objectives (id, title, objective_type, description, target_date, campaign_status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(id, input.title, input.objectiveType, input.description || '', targetDate, campaignStatus, now, now);
 
     return ObjectiveRepository.getById(id)!;
   },
 
   update(id: string, input: ObjectiveUpdateInput): Objective | null {
     const db = getDb();
-    const existing = db.prepare('SELECT id FROM objectives WHERE id = ?').get(id);
+    const existing = db.prepare('SELECT id, objective_type FROM objectives WHERE id = ?').get(id) as { id: string; objective_type: string } | undefined;
     if (!existing) return null;
 
     const sets: string[] = [];
@@ -393,6 +400,10 @@ export const ObjectiveRepository = {
 
     if (input.title !== undefined) { sets.push('title = ?'); params.push(input.title); }
     if (input.description !== undefined) { sets.push('description = ?'); params.push(input.description); }
+    if (existing.objective_type === 'campaign') {
+      if (input.targetDate !== undefined) { sets.push('target_date = ?'); params.push(input.targetDate); }
+      if (input.campaignStatus !== undefined) { sets.push('campaign_status = ?'); params.push(input.campaignStatus); }
+    }
 
     if (sets.length > 0) {
       sets.push('updated_at = ?');

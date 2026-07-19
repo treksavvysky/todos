@@ -1,5 +1,6 @@
 'use client';
 
+import { objectiveIcon } from '@/app/lib/objective-ui';
 import { useState } from 'react';
 import { useApp } from '../AppProvider';
 import TaskStatusBadge from './TaskStatusBadge';
@@ -217,7 +218,7 @@ export default function TaskDetail() {
             <option value="">None</option>
             {state.objectives.map((obj) => (
               <option key={obj.id} value={obj.id}>
-                {obj.objectiveType === 'mission' ? '🎯' : '🅿️'} {obj.title}
+                {objectiveIcon(obj.objectiveType)} {obj.title}
               </option>
             ))}
           </select>

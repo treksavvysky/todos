@@ -1,5 +1,6 @@
 'use client';
 
+import { objectiveIcon } from '@/app/lib/objective-ui';
 import type { TaskWithDetails, ObjectiveWithCounts } from '@/app/lib/types';
 import TaskStatusBadge from './TaskStatusBadge';
 import TaskPriorityBadge from './TaskPriorityBadge';
@@ -82,7 +83,7 @@ export default function TaskCard({
             <TaskStatusBadge status={task.status} />
             {objective && (
               <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ backgroundColor: 'var(--color-bg-secondary)', color: 'var(--color-text-muted)' }}>
-                {objective.objectiveType === 'mission' ? '🎯' : '🅿️'} {objective.title}
+                {objectiveIcon(objective.objectiveType)} {objective.title}
               </span>
             )}
             {isOrphaned && (

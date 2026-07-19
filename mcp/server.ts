@@ -106,31 +106,34 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "list_objectives",
-        description: "Fetch all objectives (missions and parking lots) with item counts.",
+        description: "Fetch all objectives (missions, campaigns, and parking lots) with item counts. Missions are perpetual governing contexts; campaigns are bounded operations with a target date that complete as a unit; parking lots hold deferred items.",
         inputSchema: { type: "object", properties: {} },
       },
       {
         name: "create_objective",
-        description: "Create a new objective (mission or parking lot).",
+        description: "Create a new objective (mission, campaign, or parking lot). Campaigns accept a targetDate and start with campaignStatus 'active'.",
         inputSchema: {
           type: "object",
           properties: {
             title: { type: "string" },
-            objectiveType: { type: "string", enum: ["mission", "parking_lot"] },
+            objectiveType: { type: "string", enum: ["mission", "campaign", "parking_lot"] },
             description: { type: "string" },
+            targetDate: { type: "string", description: "Campaign only: target completion date (YYYY-MM-DD)." },
           },
           required: ["title", "objectiveType"],
         },
       },
       {
         name: "update_objective",
-        description: "Update an existing objective.",
+        description: "Update an existing objective. targetDate and campaignStatus apply to campaigns only; set campaignStatus to 'complete' or 'abandoned' to close a campaign.",
         inputSchema: {
           type: "object",
           properties: {
             id: { type: "string" },
             title: { type: "string" },
             description: { type: "string" },
+            targetDate: { type: "string", description: "Campaign only: target completion date (YYYY-MM-DD)." },
+            campaignStatus: { type: "string", enum: ["active", "parked", "complete", "abandoned"], description: "Campaign only. 'parked' holds a bounded operation without abandoning it." },
           },
           required: ["id"],
         },
@@ -263,7 +266,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case "recommend_next_move": {
         const tasks = TaskRepository.list({ status: 'all' });
-        const recommendation = recommendNextMove(tasks);
+        const recommendation = recommendNextMove(tasks, ObjectiveRepository.list());
         const payload = recommendation
           ? {
               recommendation: {

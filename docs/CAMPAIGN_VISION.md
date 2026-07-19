@@ -2,7 +2,9 @@
 
 ## Status
 
-**Deferred.** This document captures the doctrine and integration design for treating Campaigns as a first-class concept in `todos`. No implementation work has been done. The current system collapses campaigns into `objectiveType: 'mission'` as a temporary measure.
+**Core slice implemented (July 2026).** `objectiveType: 'campaign'` now exists with `targetDate` and `campaignStatus` ('active' | 'parked' | 'complete' | 'abandoned'), a Campaigns sidebar/objectives section with countdown, a graduated deadline-proximity boost in the recommendation engine (active campaigns only; ≤30d +5, ≤14d +10, ≤7d +15, ≤3d +20, past target +25), and a parking shield for items on campaigns within 14 days of target.
+
+Still deferred: the external Campaign-tracker tie-in (`externalRef` / `externalSource`), campaign-level Review Mode rules (stale-campaign detection), differential WIP limits, and campaign completion roll-up/after-action summaries.
 
 The integration is gated on the completion of an external app: a dedicated **Campaign tracker** (e.g. the California Campaign tracker) that handles the full lifecycle of bounded operations. Once that app reaches a stable shape, this document becomes the basis for the tie-in.
 

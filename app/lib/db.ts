@@ -23,8 +23,10 @@ function runMigrations(db: Database.Database): void {
     CREATE TABLE IF NOT EXISTS objectives (
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL,
-      objective_type TEXT NOT NULL CHECK (objective_type IN ('mission', 'parking_lot')),
+      objective_type TEXT NOT NULL CHECK (objective_type IN ('mission', 'campaign', 'parking_lot')),
       description TEXT NOT NULL DEFAULT '',
+      target_date TEXT,
+      campaign_status TEXT CHECK (campaign_status IN ('active', 'parked', 'complete', 'abandoned')),
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
@@ -154,6 +156,32 @@ function runMigrations(db: Database.Database): void {
   }
 
   db.exec("CREATE INDEX IF NOT EXISTS idx_tasks_completed_at ON tasks(completed_at)");
+
+  // Migration: rebuild objectives table to admit the 'campaign' type and add
+  // target_date / campaign_status. SQLite can't ALTER a CHECK constraint.
+  const objectivesSQL = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='objectives'").get() as { sql: string } | undefined;
+  if (objectivesSQL && !objectivesSQL.sql.includes("'campaign'")) {
+    db.pragma('foreign_keys = OFF');
+    db.exec(`
+      CREATE TABLE objectives_new (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        objective_type TEXT NOT NULL CHECK (objective_type IN ('mission', 'campaign', 'parking_lot')),
+        description TEXT NOT NULL DEFAULT '',
+        target_date TEXT,
+        campaign_status TEXT CHECK (campaign_status IN ('active', 'parked', 'complete', 'abandoned')),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      INSERT INTO objectives_new (id, title, objective_type, description, created_at, updated_at)
+        SELECT id, title, objective_type, description, created_at, updated_at FROM objectives;
+
+      DROP TABLE objectives;
+      ALTER TABLE objectives_new RENAME TO objectives;
+    `);
+    db.pragma('foreign_keys = ON');
+  }
 
   seedDefaults(db);
 }

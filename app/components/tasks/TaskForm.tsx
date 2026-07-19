@@ -1,5 +1,6 @@
 'use client';
 
+import { objectiveIcon } from '@/app/lib/objective-ui';
 import { useMemo, useState } from 'react';
 import { useApp } from '../AppProvider';
 import Modal from '../ui/Modal';
@@ -175,7 +176,7 @@ export default function TaskForm({ onClose }: TaskFormProps) {
               <option value="">⚠ Unbound (provisional)</option>
               {state.objectives.map((obj) => (
                 <option key={obj.id} value={obj.id}>
-                  {obj.objectiveType === 'mission' ? '🎯' : '🅿️'} {obj.title}
+                  {objectiveIcon(obj.objectiveType)} {obj.title}
                 </option>
               ))}
             </select>

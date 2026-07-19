@@ -1,5 +1,6 @@
 'use client';
 
+import { objectiveIcon } from '@/app/lib/objective-ui';
 import { useMemo, useState } from 'react';
 import { useApp } from '../AppProvider';
 import ItemTypeBadge from '../tasks/ItemTypeBadge';
@@ -246,7 +247,7 @@ function BucketCard({
                       className="w-full text-left text-xs px-3 py-1.5 hover:opacity-80"
                       style={{ color: 'var(--color-text)' }}
                     >
-                      {obj.objectiveType === 'mission' ? '🎯' : '🅿️'} {obj.title}
+                      {objectiveIcon(obj.objectiveType)} {obj.title}
                     </button>
                   ))}
                 </div>
@@ -353,7 +354,7 @@ function ReviewItemRow({
                     className="w-full text-left text-xs px-3 py-1.5 hover:opacity-80"
                     style={{ color: 'var(--color-text)' }}
                   >
-                    {obj.objectiveType === 'mission' ? '🎯' : '🅿️'} {obj.title}
+                    {objectiveIcon(obj.objectiveType)} {obj.title}
                   </button>
                 ))}
               </div>

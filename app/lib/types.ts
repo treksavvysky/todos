@@ -3,7 +3,8 @@
 export type TaskStatus = 'ready' | 'active' | 'blocked' | 'waiting' | 'parked' | 'done';
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
 export type ItemType = 'action' | 'decision' | 'initiative' | 'idea' | 'maintenance';
-export type ObjectiveType = 'mission' | 'parking_lot';
+export type ObjectiveType = 'mission' | 'campaign' | 'parking_lot';
+export type CampaignStatus = 'active' | 'parked' | 'complete' | 'abandoned';
 export type LabelKind = 'scope' | 'project';
 
 // ---- Core Entities ----
@@ -13,6 +14,11 @@ export interface Objective {
   title: string;
   objectiveType: ObjectiveType;
   description: string;
+  // Campaign-only fields — always null for mission and parking_lot.
+  // A campaign is a bounded operation: it has a target date and completes
+  // (or is abandoned) as a unit, unlike perpetual missions.
+  targetDate: string | null;
+  campaignStatus: CampaignStatus | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -82,11 +88,16 @@ export interface ObjectiveCreateInput {
   title: string;
   objectiveType: ObjectiveType;
   description?: string;
+  // Campaign only; ignored for other types.
+  targetDate?: string | null;
 }
 
 export interface ObjectiveUpdateInput {
   title?: string;
   description?: string;
+  // Campaign only; ignored for other types.
+  targetDate?: string | null;
+  campaignStatus?: CampaignStatus;
 }
 
 export interface LabelCreateInput {

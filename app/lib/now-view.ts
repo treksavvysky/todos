@@ -84,12 +84,12 @@ export function buildNowSnapshot(
   });
 
   // Recommendation comes from the engine — single source of truth
-  const recommendedMove = recommendNextMove(tasks);
+  const recommendedMove = recommendNextMove(tasks, objectives);
 
   // Parking pressure: cooling candidates that should leave the active field.
   // Reuses the engine's shared EngineContext shape (hot fronts, live siblings)
   // to protect items that belong to momentum and surface the ones that don't.
-  const parkingCtx = buildEngineContext(tasks);
+  const parkingCtx = buildEngineContext(tasks, objectives);
   const parkingSuggestions = rankParkingCandidates(tasks, parkingCtx);
 
   // Open decisions: ready decisions, bound first

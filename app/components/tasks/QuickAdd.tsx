@@ -1,5 +1,6 @@
 'use client';
 
+import { objectiveIcon } from '@/app/lib/objective-ui';
 import { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../AppProvider';
 import { parseTaskIntent } from '@/app/lib/intent-parser';
@@ -143,7 +144,7 @@ export default function QuickAdd({ onClose }: QuickAddProps) {
               <option value="">⚠ Unbound (provisional)</option>
               {state.objectives.map((obj) => (
                 <option key={obj.id} value={obj.id}>
-                  {obj.objectiveType === 'mission' ? '🎯' : '🅿️'} {obj.title}
+                  {objectiveIcon(obj.objectiveType)} {obj.title}
                 </option>
               ))}
             </select>
