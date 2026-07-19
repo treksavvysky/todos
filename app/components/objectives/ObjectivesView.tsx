@@ -24,7 +24,8 @@ export default function ObjectivesView() {
   const orphanedTasks = state.tasks.filter(t => !t.objectiveId && !t.parentItemId);
 
   for (const obj of state.objectives) {
-    tasksByObjective.set(obj.id, state.tasks.filter(t => t.objectiveId === obj.id));
+    // Children render nested under their parent item, not as top-level cards
+    tasksByObjective.set(obj.id, state.tasks.filter(t => t.objectiveId === obj.id && !t.parentItemId));
   }
 
   // Group parent items (initiatives/maintenance) and their children
