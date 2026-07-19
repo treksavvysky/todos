@@ -1,11 +1,20 @@
-version: '3.8'
-
 services:
   todo-app:
-    build: .
+    build:
+      context: .
+      additional_contexts:
+        # ~/plugins/packages — pointed below the repo root so its .dockerignore
+        # (which excludes **/dist) does not apply; packages must be built
+        # (npm run build in ~/plugins) before building this image.
+        plugins: ../../plugins/packages
     container_name: todo-app
     ports:
       - "8153:8153"
     volumes:
-      - ./data:/app/data
+      - ./data:/opt/lifeops/todos/data
+    environment:
+      AGENT_GATE_ADMIN_TOKEN: ${AGENT_GATE_ADMIN_TOKEN:?set in .env}
+      AGENT_GATE_PUBLIC_URL: ${AGENT_GATE_PUBLIC_URL:-https://todos.codejourney.com}
+      AGENT_GATE_PUBLIC_NAME: ${AGENT_GATE_PUBLIC_NAME:-Todos}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
     restart: unless-stopped
