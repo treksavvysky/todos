@@ -1,3 +1,5 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
@@ -7,6 +9,11 @@ import {
 import { TaskRepository, LabelRepository, ObjectiveRepository, CommentRepository } from "../app/lib/repositories.js";
 import { recommendNextMove } from "../app/lib/recommendation-engine.js";
 import type { TaskFilters, TaskUpdateInput, TaskCreateInput, ObjectiveCreateInput, ObjectiveUpdateInput } from "../app/lib/types.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+if (!process.env.TODOS_DB_PATH) {
+  process.env.TODOS_DB_PATH = path.resolve(__dirname, "../data/tasks.db");
+}
 
 const server = new Server(
   {
