@@ -8,8 +8,15 @@ services:
         # (npm run build in ~/plugins) before building this image.
         plugins: ../../plugins/packages
     container_name: todo-app
+    # Never publish on all interfaces: Docker bypasses ufw. Set TODOS_BIND_IP
+    # to the host's tailnet IP in .env to serve the tailnet (Tailscale-only
+    # by policy since SEC-2026-10-20-TODOS); defaults to loopback.
     ports:
-      - "8153:8153"
+      - "${TODOS_BIND_IP:-127.0.0.1}:8153:8153"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     volumes:
       - ./data:/opt/lifeops/todos/data
     environment:

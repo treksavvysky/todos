@@ -12,7 +12,7 @@ npm run lint         # ESLint with TypeScript rules
 npm run mcp:start    # Start MCP server (stdio transport)
 ```
 
-Docker: `docker compose up --build` — runs on port 8153, mounts `./data` for persistent SQLite.
+Docker: `docker compose up --build` — runs on port 8153 as the non-root `node` user, mounts `./data` for persistent SQLite. The port binds to `TODOS_BIND_IP` (default `127.0.0.1`); production on atlas-xxl sets it to the tailnet IP. The app is Tailscale-only by policy: never publish 8153 on all interfaces or expose it publicly (SEC-2026-10-20-TODOS).
 
 No test framework is configured.
 

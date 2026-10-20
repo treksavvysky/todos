@@ -38,6 +38,12 @@ COPY . .
 # Build the Next.js application
 RUN npm run build
 
+# Run as the unprivileged node user (uid 1000, matching the owner of the
+# bind-mounted data/ on the host). The app ran as root before, which let an
+# RCE install a rootkit in the container (SEC-2026-10-20-TODOS).
+RUN chown -R node:node /opt/lifeops/todos
+USER node
+
 # Expose port 8153
 EXPOSE 8153
 

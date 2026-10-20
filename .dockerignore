@@ -3,4 +3,8 @@ node_modules
 .git
 .gitignore
 README.md
-.env*.local
+.env*
+data
+.claude
+.gemini
+.mcp.json
