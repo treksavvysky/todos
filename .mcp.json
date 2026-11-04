@@ -2,16 +2,12 @@
   "mcpServers": {
     "todos": {
       "type": "stdio",
-      "command": "docker",
-      "args": [
-        "exec",
-        "-i",
-        "todo-app",
-        "npx",
-        "tsx",
-        "/app/mcp/server.ts"
-      ],
-      "env": {}
+      "command": "node_modules/.bin/tsx",
+      "args": ["mcp/server.ts"],
+      "env": {
+        "TODOS_API_URL": "http://100.123.108.47:8153",
+        "TODOS_AGENT_KEY_FILE": "${HOME}/.config/todos-mcp/Claude.key"
+      }
     }
   }
 }

@@ -45,7 +45,7 @@ AI endpoints require `GEMINI_API_KEY` env var. Fallback heuristic parser in `app
 
 ### MCP Server (`mcp/`)
 
-Stdio-based Model Context Protocol server exposing task CRUD tools for AI agents (Claude Desktop, Gemini CLI). Shares the same database and repository layer.
+Stdio Model Context Protocol server for AI agents. **Remote mode** (normal) is a thin client of the production agent API (`/api/agent/*`): it needs `TODOS_API_URL` plus an agent-gate key in `TODOS_AGENT_KEY` or `TODOS_AGENT_KEY_FILE`. **Local mode** (`TODOS_MCP_LOCAL=1`) uses the repository layer against a local dev SQLite file. With neither set, it refuses to start. This repo's `.mcp.json` uses remote mode with the key in `~/.config/todos-mcp/Claude.key` (mode 600, outside the repo). See `mcp/README.md`.
 
 ### Agent Gate (`app/api/agent/*`)
 

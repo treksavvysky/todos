@@ -39,7 +39,7 @@ The project follows a clean architecture for both frontend and backend:
 
 *   The database is automatically initialized and migrated on the first run.
 *   Database schema and initial seed data for "Scope" labels are defined in `app/lib/db.ts`.
-*   Data is stored locally in `data/tasks.db` (git-ignored).
+*   Data is stored locally in `data/tasks.db` (git-ignored). On codejourney that file is a stale development copy: production data lives on atlas-xxl, and agents reach it through the MCP server's remote mode (see `mcp/README.md`), never through the local file.
 
 ## Development Conventions
 
