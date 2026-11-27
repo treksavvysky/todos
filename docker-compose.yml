@@ -2,11 +2,6 @@ services:
   todo-app:
     build:
       context: .
-      additional_contexts:
-        # ~/plugins/packages — pointed below the repo root so its .dockerignore
-        # (which excludes **/dist) does not apply; packages must be built
-        # (npm run build in ~/plugins) before building this image.
-        plugins: ../../plugins/packages
     container_name: todo-app
     # Never publish on all interfaces: Docker bypasses ufw. Set TODOS_BIND_IP
     # to the host's tailnet IP in .env to serve the tailnet (Tailscale-only
