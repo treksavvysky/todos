@@ -29,8 +29,16 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-## Deploy on Vercel
+## Deployment
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Todos is not deployed on Vercel. Production runs on atlas-xxl as an infrastructure deploy unit
+(`treksavvysky/infrastructure`, `hosts/atlas-xxl/services/todos`), reachable only over Tailscale
+(SEC-2026-10-20-TODOS).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Only pushed commits are deployed. The image `todo-app:<short-sha>` is built from the commit itself
+  on the isolated builder (rootless BuildKit on atlas-xxl) and stored in the private tailnet registry.
+- `deploy-unit todos --release <sha> --build --reason "…"` on atlas-xxl builds if needed, pulls the
+  image, backs up `data/` (`pre_up`), restarts the container, checks health, and rolls back to the
+  previous release if the checks fail.
+- `@plugins/*` are vendored in `vendor/plugins/`, so a todos commit alone fixes the whole build.
+- Local development: `npm run dev` (above) or `docker compose up --build` (see `CLAUDE.md`).
